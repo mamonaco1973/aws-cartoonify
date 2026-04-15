@@ -13,6 +13,8 @@ Built on a **serverless, event-driven** architecture using **API Gateway
 (zip + container image), **ECR**, **S3**, and **Bedrock** — provisioned with
 **Terraform** in four stages.
 
+![webapp](webapp.png)
+
 ## Features
 
 - **Cognito-authenticated** SPA with self-service signup (email-based)
