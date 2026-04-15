@@ -120,7 +120,8 @@ Daily quota responses are `429` with `{"error":"Daily limit of 100 reached", ...
 ## Changing the Bedrock model
 
 The model is parameterized end-to-end. To retarget, edit the three `export`
-lines near the top of [apply.sh](apply.sh):
+lines in [bedrock-config.sh](bedrock-config.sh) (sourced by both `apply.sh`
+and `destroy.sh`):
 
 ```bash
 export BEDROCK_MODEL_ID="stability.stable-image-control-structure-v1:0"

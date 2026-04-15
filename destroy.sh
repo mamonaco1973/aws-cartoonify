@@ -10,6 +10,11 @@
 export AWS_DEFAULT_REGION="us-east-1"
 set -euo pipefail
 
+# Bedrock model selection lives in bedrock-config.sh so apply.sh and
+# destroy.sh stay in sync. `terraform destroy` still needs values for the
+# required variables even though they don't affect what gets destroyed.
+source ./bedrock-config.sh
+
 # ------------------------------------------------------------------------------
 # Discover names before backend is destroyed.
 # ------------------------------------------------------------------------------
@@ -43,7 +48,10 @@ pushd 03-api > /dev/null
 terraform init
 terraform destroy -auto-approve \
   -var="media_bucket_name=${MEDIA_BUCKET}" \
-  -var="worker_image_tag=worker-rc1"
+  -var="worker_image_tag=worker-rc1" \
+  -var="bedrock_model_id=${BEDROCK_MODEL_ID}" \
+  -var="bedrock_inference_profile_id=${BEDROCK_INFERENCE_PROFILE_ID}" \
+  -var="bedrock_model_regions=${BEDROCK_MODEL_REGIONS}"
 popd > /dev/null
 
 # ==============================================================================

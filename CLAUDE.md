@@ -219,13 +219,14 @@ one created by `01-backend`. The bucket name is passed via `-var=web_bucket_name
 | `02-worker/cartoonify/*.py` or `Dockerfile` | Bump `WORKER_TAG` in `apply.sh` (e.g. `worker-rc2`), then re-run `./apply.sh` — the image-exists check will rebuild + push, and Terraform will update the worker Lambda's `image_uri` |
 | Style prompts | Edit `STYLE_PROMPTS` in `02-worker/cartoonify/app.py` **and** `ALLOWED_STYLES` in `03-api/code/common.py` **and** `<option>` list in `04-webapp/index.html.tmpl` |
 | Upload limits | Edit `MAX_UPLOAD_BYTES` in `03-api/code/common.py` **and** the two `MAX_*` constants in `04-webapp/index.html.tmpl` |
-| Bedrock model | Edit the three `export BEDROCK_*` lines in [apply.sh](apply.sh) — see below |
+| Bedrock model | Edit the three `export BEDROCK_*` lines in [bedrock-config.sh](bedrock-config.sh) — see below |
 
 ## Changing the Bedrock model
 
-The model is parameterized end-to-end. A single edit in [apply.sh](apply.sh)
-retargets the pre-flight probe, the worker Lambda env var, and the worker
-IAM policy:
+The model is parameterized end-to-end. A single edit in
+[bedrock-config.sh](bedrock-config.sh) retargets the pre-flight probe, the
+worker Lambda env var, and the worker IAM policy. Both `apply.sh` and
+`destroy.sh` source this file so they stay in sync:
 
 ```bash
 export BEDROCK_MODEL_ID="stability.stable-image-control-structure-v1:0"

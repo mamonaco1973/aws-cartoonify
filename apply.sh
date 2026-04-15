@@ -17,18 +17,9 @@ set -euo pipefail
 
 WORKER_TAG="worker-rc3"
 
-# ------------------------------------------------------------------------------
-# Bedrock model selection — single source of truth.
-#
-# To switch models (e.g. to Nova Canvas or a newer Stability version), change
-# these three values. They flow to check_env.sh (pre-flight probe), the worker
-# Lambda env var (runtime invoke_model call), and the worker IAM policy
-# (Bedrock Resource ARNs). `BEDROCK_MODEL_REGIONS` lists every region the
-# cross-region inference profile may route to — all must appear in IAM.
-# ------------------------------------------------------------------------------
-export BEDROCK_MODEL_ID="stability.stable-image-control-structure-v1:0"
-export BEDROCK_INFERENCE_PROFILE_ID="us.stability.stable-image-control-structure-v1:0"
-export BEDROCK_MODEL_REGIONS='["us-east-1","us-east-2","us-west-2"]'
+# Bedrock model selection lives in bedrock-config.sh so apply.sh and
+# destroy.sh stay in sync. Edit that file to switch models.
+source ./bedrock-config.sh
 
 # ------------------------------------------------------------------------------
 # Pre-flight
