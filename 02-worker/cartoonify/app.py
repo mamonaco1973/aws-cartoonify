@@ -111,11 +111,14 @@ def prepare_image(src_bytes: bytes) -> str:
 #   { "seeds": [...], "finish_reasons": ["SUCCESS"|"CONTENT_FILTERED"|...],
 #     "images": ["<b64 png>"] }
 # ------------------------------------------------------------------------------
-def invoke_bedrock(source_b64: str, style_id: str) -> bytes:
+def invoke_bedrock(source_b64: str, style_id: str, prompt_extra: str = "") -> bytes:
     """Call Stability Control-Structure and return generated PNG bytes."""
     prompt = STYLE_PROMPTS.get(style_id)
     if not prompt:
         raise ValueError(f"Unknown style id: {style_id}")
+
+    if prompt_extra:
+        prompt = f"{prompt}, {prompt_extra}"
 
     payload = {
         "image":            source_b64,
@@ -194,9 +197,10 @@ def process_message(body: dict) -> None:
     owner        = body["owner"]
     style        = body["style"]
     original_key = body["original_key"]
+    prompt_extra = body.get("prompt_extra") or ""
 
-    logger.info("Processing job=%s owner=%s style=%s key=%s",
-                job_id, owner, style, original_key)
+    logger.info("Processing job=%s owner=%s style=%s key=%s extra=%r",
+                job_id, owner, style, original_key, prompt_extra)
 
     mark_processing(owner, job_id)
 
@@ -208,7 +212,7 @@ def process_message(body: dict) -> None:
     prepared_b64 = prepare_image(src_bytes)
 
     # 3. Bedrock call
-    cartoon_bytes = invoke_bedrock(prepared_b64, style)
+    cartoon_bytes = invoke_bedrock(prepared_b64, style, prompt_extra)
 
     # 4. Upload result
     cartoon_key = f"cartoons/{owner}/{job_id}.png"

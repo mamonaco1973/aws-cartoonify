@@ -30,6 +30,7 @@ from common import (
     ALLOWED_STYLES,
     DAILY_QUOTA,
     JOB_TTL_SECONDS,
+    MAX_PROMPT_EXTRA,
     get_owner,
     job_id_ms,
     parse_body,
@@ -66,10 +67,11 @@ def lambda_handler(event, context):
     except PermissionError as e:
         return response(401, {"error": str(e)})
 
-    body   = parse_body(event)
-    job_id = body.get("job_id")
-    style  = body.get("style")
-    key    = body.get("key")
+    body         = parse_body(event)
+    job_id       = body.get("job_id")
+    style        = body.get("style")
+    key          = body.get("key")
+    prompt_extra = (body.get("prompt_extra") or "").strip()
 
     if not job_id or not key:
         return response(400, {"error": "Missing job_id or key"})
@@ -77,6 +79,9 @@ def lambda_handler(event, context):
     if style not in ALLOWED_STYLES:
         return response(400, {"error": "Unsupported style",
                               "allowed": sorted(ALLOWED_STYLES)})
+
+    if len(prompt_extra) > MAX_PROMPT_EXTRA:
+        return response(400, {"error": f"prompt_extra exceeds {MAX_PROMPT_EXTRA} chars"})
 
     # Defend against a client reusing another user's key.
     expected_prefix = f"originals/{owner}/{job_id}."
@@ -106,15 +111,17 @@ def lambda_handler(event, context):
     now = int(time.time())
     created_at_ms = job_id_ms(job_id)
     item = {
-        "owner":        owner,
-        "job_id":       job_id,
-        "status":       "submitted",
-        "style":        style,
-        "original_key": key,
-        "created_at":   now,
+        "owner":         owner,
+        "job_id":        job_id,
+        "status":        "submitted",
+        "style":         style,
+        "original_key":  key,
+        "created_at":    now,
         "created_at_ms": created_at_ms,
-        "ttl":          now + JOB_TTL_SECONDS,
+        "ttl":           now + JOB_TTL_SECONDS,
     }
+    if prompt_extra:
+        item["prompt_extra"] = prompt_extra
     table.put_item(Item=item)
 
     sqs.send_message(
@@ -124,6 +131,7 @@ def lambda_handler(event, context):
             "owner":        owner,
             "style":        style,
             "original_key": key,
+            "prompt_extra": prompt_extra,
         }),
     )
 
