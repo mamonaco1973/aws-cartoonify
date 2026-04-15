@@ -133,8 +133,10 @@ def invoke_bedrock(source_b64: str, style_id: str) -> bytes:
 
     body = json.loads(res["body"].read())
 
+    # Stability control-structure returns finish_reasons: [null] on success;
+    # a non-null value (e.g. "CONTENT_FILTERED", "ERROR") signals failure.
     finish_reasons = body.get("finish_reasons") or []
-    if finish_reasons and finish_reasons[0] != "SUCCESS":
+    if finish_reasons and finish_reasons[0] is not None:
         raise RuntimeError(f"Bedrock finish_reason: {finish_reasons[0]}")
 
     images = body.get("images") or []
