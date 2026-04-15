@@ -65,13 +65,22 @@ resource "aws_iam_role_policy" "worker_inline" {
         Effect = "Allow",
         Action = ["bedrock:InvokeModel"],
         Resource = [
-          # Cross-region US inference profile (actual invocation target)
           "arn:aws:bedrock:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:inference-profile/us.stability.stable-image-control-structure-v1:0",
-          # Underlying foundation models in every region the profile may route to
           "arn:aws:bedrock:us-east-1::foundation-model/stability.stable-image-control-structure-v1:0",
           "arn:aws:bedrock:us-east-2::foundation-model/stability.stable-image-control-structure-v1:0",
           "arn:aws:bedrock:us-west-2::foundation-model/stability.stable-image-control-structure-v1:0"
         ]
+      },
+      # ← ADD THIS BLOCK
+      {
+        Sid    = "BedrockMarketplaceSubscription",
+        Effect = "Allow",
+        Action = [
+          "aws-marketplace:ViewSubscriptions",
+          "aws-marketplace:Subscribe",
+          "aws-marketplace:Unsubscribe"
+        ],
+        Resource = "*"   # Marketplace actions don't support resource scoping
       }
     ]
   })
