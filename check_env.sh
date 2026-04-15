@@ -36,13 +36,37 @@ fi
 echo "NOTE: Successfully logged into AWS."
 
 PROFILE_ID="us.stability.stable-image-control-structure-v1:0"
+MODEL_ID="stability.stable-image-control-structure-v1:0"
+
 echo "NOTE: Checking Bedrock inference profile ${PROFILE_ID} in ${REGION}."
+
+# Check 1: Profile exists
 if ! aws bedrock list-inference-profiles --region "${REGION}" \
        --query "inferenceProfileSummaries[?inferenceProfileId=='${PROFILE_ID}'].inferenceProfileId" \
        --output text 2>/dev/null | grep -q "${PROFILE_ID}"; then
   echo "ERROR: Inference profile ${PROFILE_ID} is not available in ${REGION}."
-  echo "       Enable access to the underlying foundation model in the Bedrock console:"
-  echo "         https://console.aws.amazon.com/bedrock/home?region=${REGION}#/modelaccess"
+  echo "       Enable access: https://console.aws.amazon.com/bedrock/home?region=${REGION}#/modelaccess"
   exit 1
 fi
-echo "NOTE: Bedrock inference profile is accessible."
+
+echo "NOTE: Testing Bedrock model invocation (dry-run)..."
+TEST_PAYLOAD=$(echo '{"image":"","prompt":"test","control_strength":0.5,"output_format":"png"}' | base64)
+
+if ! aws bedrock invoke-model \
+  --region "${REGION}" \
+  --model-id "${PROFILE_ID}" \
+  --content-type "application/json" \
+  --accept "application/json" \
+  --body '{"image":"iVBORw0KGgo=","prompt":"test","output_format":"png"}' \
+  /tmp/bedrock-test-out.json 2>&1 | grep -qE "ValidationException|could not be satisfied"; then
+    ERR=$(cat /tmp/bedrock-test-out.json 2>/dev/null)
+    if echo "$ERR" | grep -q "AccessDeniedException"; then
+        echo "ERROR: Bedrock invocation failed — likely missing Marketplace subscription."
+        echo "       Go to: https://console.aws.amazon.com/bedrock/home?region=${REGION}#/modelaccess"
+        echo "       And verify: https://console.aws.amazon.com/marketplace/home#/subscriptions"
+        exit 1
+    fi
+fi
+echo "NOTE: Bedrock invocation access confirmed."
+
+
