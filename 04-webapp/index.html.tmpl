@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <title>Cartoonify</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+
+    header {
+      padding: 16px;
+      background: #020617;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    h1 { margin: 0; font-size: 18px; }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+    section {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    section h2 { margin: 0 0 10px 0; font-size: 14px; color: #cbd5e1; }
+
+    button {
+      padding: 8px 14px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+      font-size: 13px;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.secondary { background: #475569; }
+    button.delete { background: #dc2626; }
+
+    input, select {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      border: 1px solid #1e293b;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 13px;
+    }
+
+    label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px; }
+
+    .status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #94a3b8;
+      white-space: pre-wrap;
+    }
+
+    .current-job {
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px dashed #334155;
+      border-radius: 6px;
+    }
+    .current-job img { max-width: 100%; border-radius: 4px; display: block; margin-top: 8px; }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .tile {
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #0b1220;
+    }
+    .tile img {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      display: block;
+      background: #020617;
+    }
+    .tile .meta {
+      padding: 8px 10px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .tile .meta .style-tag { color: #94a3b8; }
+    .tile .meta .status-tag { text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+    .tile .meta .status-tag.complete   { color: #34d399; }
+    .tile .meta .status-tag.processing { color: #fbbf24; }
+    .tile .meta .status-tag.submitted  { color: #60a5fa; }
+    .tile .meta .status-tag.error      { color: #f87171; }
+
+    .busy-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .busy-overlay.active { display: flex; cursor: wait; }
+    .busy-box {
+      padding: 16px 18px;
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      font-size: 13px;
+      color: #e5e7eb;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; max-width:1200px; margin:0 auto;">
+    <h1>Cartoonify</h1>
+    <div style="display:flex; gap:8px;">
+      <button id="btnLogin" class="secondary">Sign in</button>
+      <button id="btnLogout" class="secondary" style="display:none;">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Submit panel -->
+  <section>
+    <h2>Create a cartoon</h2>
+
+    <label for="fileInput">Image (JPEG/PNG/WebP, max 5 MB)</label>
+    <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" />
+
+    <label for="styleSelect">Style</label>
+    <select id="styleSelect">
+      <option value="studio_ghibli">Studio Ghibli</option>
+      <option value="pixar_3d">Pixar 3D</option>
+      <option value="simpsons">Simpsons</option>
+      <option value="anime">Anime</option>
+      <option value="comic_book">Comic Book</option>
+      <option value="watercolor">Watercolor</option>
+      <option value="pencil_sketch">Pencil Sketch</option>
+    </select>
+
+    <button id="btnSubmit">Cartoonify</button>
+
+    <div id="submitStatus" class="status"></div>
+
+    <div id="currentJob" class="current-job" style="display:none;">
+      <div id="currentJobStatus" class="status"></div>
+      <img id="currentJobImg" style="display:none;" alt="cartoon result" />
+    </div>
+  </section>
+
+  <!-- Gallery -->
+  <section>
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <h2 style="margin:0;">History</h2>
+      <button id="btnRefresh" class="secondary">Refresh</button>
+    </div>
+    <div id="gallery" class="gallery" style="margin-top:12px;"></div>
+    <div id="galleryStatus" class="status"></div>
+  </section>
+
+</main>
+
+<div id="busyOverlay" class="busy-overlay"><div class="busy-box">Working…</div></div>
+
+<script>
+// =========================================================================
+// Config
+// =========================================================================
+const API_BASE = "${API_BASE}";
+const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_DIM   = 2048;
+const POLL_MS   = 2000;
+const POLL_MAX  = 90;   // ~3 minutes
+
+let AUTH = null;
+let pollTimer = null;
+
+async function loadAuthConfig() {
+  const res = await fetch("/config.json", { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load /config.json");
+  AUTH = await res.json();
+  if (!AUTH.cognitoDomain || !AUTH.clientId || !AUTH.redirectUri) {
+    throw new Error("config.json missing fields");
+  }
+}
+
+// =========================================================================
+// Auth (PKCE)
+// =========================================================================
+function isAuthenticated() { return !!sessionStorage.getItem("access_token"); }
+
+function updateAuthButtons() {
+  const loggedIn = isAuthenticated();
+  document.getElementById("btnLogin").style.display  = loggedIn ? "none" : "inline-block";
+  document.getElementById("btnLogout").style.display = loggedIn ? "inline-block" : "none";
+}
+
+function b64url(bytes) {
+  let bin = "";
+  const arr = new Uint8Array(bytes);
+  for (let i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+async function sha256(str) {
+  const enc = new TextEncoder().encode(str);
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", enc));
+}
+function rand(len = 64) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) out += chars[bytes[i] % chars.length];
+  return out;
+}
+
+async function startLogin() {
+  const verifier  = rand(64);
+  const challenge = b64url(await sha256(verifier));
+  const state     = rand(24);
+
+  sessionStorage.setItem("pkce_code_verifier", verifier);
+  sessionStorage.setItem("oauth_state", state);
+
+  const url = "https://" + AUTH.cognitoDomain + "/oauth2/authorize"
+    + "?client_id=" + encodeURIComponent(AUTH.clientId)
+    + "&response_type=code"
+    + "&scope=" + encodeURIComponent("openid email profile")
+    + "&redirect_uri=" + encodeURIComponent(AUTH.redirectUri)
+    + "&state=" + encodeURIComponent(state)
+    + "&code_challenge=" + encodeURIComponent(challenge)
+    + "&code_challenge_method=S256";
+
+  window.location.href = url;
+}
+
+function startLogout() {
+  for (const k of ["access_token", "id_token", "refresh_token", "expires_in",
+                   "token_received_at", "pkce_code_verifier", "oauth_state"]) {
+    sessionStorage.removeItem(k);
+  }
+  const logout = "https://" + AUTH.cognitoDomain + "/logout"
+    + "?client_id=" + encodeURIComponent(AUTH.clientId)
+    + "&logout_uri=" + encodeURIComponent(window.location.origin + "/index.html");
+  window.location.href = logout;
+}
+
+// =========================================================================
+// API helpers
+// =========================================================================
+async function api(path, method = "GET", body) {
+  const headers = { "Content-Type": "application/json" };
+  const token = sessionStorage.getItem("access_token");
+  if (token) headers["Authorization"] = "Bearer " + token;
+
+  const res = await fetch(API_BASE + path, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    const msg = (data && data.error) || res.status;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+function setBusy(on) { document.getElementById("busyOverlay").classList.toggle("active", on); }
+function setSubmitStatus(msg) { document.getElementById("submitStatus").textContent = msg || ""; }
+function setGalleryStatus(msg) { document.getElementById("galleryStatus").textContent = msg || ""; }
+
+// =========================================================================
+// Client-side image validation
+// =========================================================================
+function validateFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return reject(new Error("Please choose an image"));
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      return reject(new Error("Unsupported file type. Use JPEG, PNG, or WebP."));
+    }
+    if (file.size > MAX_BYTES) {
+      return reject(new Error("File exceeds 5 MB limit"));
+    }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      if (img.width > MAX_DIM || img.height > MAX_DIM) {
+        reject(new Error("Image dimensions exceed " + MAX_DIM + " px"));
+      } else {
+        resolve();
+      }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Could not read image")); };
+    img.src = url;
+  });
+}
+
+// =========================================================================
+// Submit flow
+// =========================================================================
+async function submitJob() {
+  if (!isAuthenticated()) {
+    setSubmitStatus("Please sign in first.");
+    return;
+  }
+
+  const fileEl  = document.getElementById("fileInput");
+  const styleEl = document.getElementById("styleSelect");
+  const file    = fileEl.files[0];
+  const style   = styleEl.value;
+
+  try {
+    await validateFile(file);
+  } catch (e) {
+    setSubmitStatus(e.message);
+    return;
+  }
+
+  setBusy(true);
+  setSubmitStatus("Requesting upload URL...");
+  try {
+    const presign = await api("/upload-url", "POST", { content_type: file.type });
+
+    // Browser upload via presigned POST
+    setSubmitStatus("Uploading image...");
+    const form = new FormData();
+    for (const [k, v] of Object.entries(presign.fields)) form.append(k, v);
+    form.append("file", file);
+
+    const upRes = await fetch(presign.url, { method: "POST", body: form });
+    if (!upRes.ok) {
+      const body = await upRes.text();
+      throw new Error("Upload failed: " + upRes.status + " " + body);
+    }
+
+    setSubmitStatus("Queuing job...");
+    const submit = await api("/generate", "POST", {
+      job_id: presign.job_id,
+      key:    presign.key,
+      style,
+    });
+
+    setSubmitStatus("Submitted. Waiting for result...");
+    showCurrentJob(submit.job_id, "submitted", null);
+    pollResult(submit.job_id);
+  } catch (e) {
+    setSubmitStatus("Error: " + e.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+function showCurrentJob(job_id, status, url) {
+  const cj = document.getElementById("currentJob");
+  const cjs = document.getElementById("currentJobStatus");
+  const cji = document.getElementById("currentJobImg");
+  cj.style.display = "block";
+  cjs.textContent = "Job " + job_id + " → " + status;
+  if (url) { cji.src = url; cji.style.display = "block"; }
+  else     { cji.style.display = "none"; }
+}
+
+function stopPoll() {
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+}
+
+function pollResult(job_id, attempt = 0) {
+  stopPoll();
+  if (attempt >= POLL_MAX) {
+    showCurrentJob(job_id, "timed out", null);
+    return;
+  }
+  pollTimer = setTimeout(async () => {
+    try {
+      const res = await api("/result/" + encodeURIComponent(job_id));
+      if (res.status === "complete") {
+        showCurrentJob(job_id, "complete", res.cartoon_url);
+        loadHistory();
+      } else if (res.status === "error") {
+        showCurrentJob(job_id, "error: " + (res.error_message || "unknown"), null);
+      } else {
+        showCurrentJob(job_id, res.status || "pending", null);
+        pollResult(job_id, attempt + 1);
+      }
+    } catch (e) {
+      showCurrentJob(job_id, "poll error: " + e.message, null);
+    }
+  }, POLL_MS);
+}
+
+// =========================================================================
+// Gallery
+// =========================================================================
+async function loadHistory() {
+  if (!isAuthenticated()) return;
+  setGalleryStatus("Loading...");
+  try {
+    const res = await api("/history");
+    renderGallery(res.items || []);
+    setGalleryStatus(res.items.length ? "" : "No cartoons yet. Create one!");
+  } catch (e) {
+    setGalleryStatus("Error loading history: " + e.message);
+  }
+}
+
+function renderGallery(items) {
+  const g = document.getElementById("gallery");
+  g.innerHTML = "";
+  items.forEach(it => {
+    const tile = document.createElement("div");
+    tile.className = "tile";
+
+    const img = document.createElement("img");
+    img.alt = it.style || "";
+    img.src = it.cartoon_url || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'/>";
+    tile.appendChild(img);
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+
+    const styleTag = document.createElement("span");
+    styleTag.className = "style-tag";
+    styleTag.textContent = (it.style || "").replace(/_/g, " ");
+    meta.appendChild(styleTag);
+
+    const statusTag = document.createElement("span");
+    statusTag.className = "status-tag " + (it.status || "");
+    statusTag.textContent = it.status || "";
+    meta.appendChild(statusTag);
+
+    tile.appendChild(meta);
+
+    const footer = document.createElement("div");
+    footer.style.cssText = "padding:0 10px 10px 10px; display:flex; gap:6px;";
+
+    if (it.cartoon_url) {
+      const dl = document.createElement("a");
+      dl.href = it.cartoon_url;
+      dl.download = it.job_id + ".png";
+      dl.textContent = "Download";
+      dl.style.cssText = "font-size:12px; color:#60a5fa; text-decoration:none;";
+      footer.appendChild(dl);
+    }
+
+    const del = document.createElement("button");
+    del.className = "delete";
+    del.style.cssText = "padding: 4px 8px; font-size: 11px; margin-left: auto;";
+    del.textContent = "Delete";
+    del.addEventListener("click", () => deleteJob(it.job_id));
+    footer.appendChild(del);
+
+    tile.appendChild(footer);
+    g.appendChild(tile);
+  });
+}
+
+async function deleteJob(job_id) {
+  if (!confirm("Delete this cartoon?")) return;
+  setBusy(true);
+  try {
+    await api("/history/" + encodeURIComponent(job_id), "DELETE");
+    loadHistory();
+  } catch (e) {
+    setGalleryStatus("Delete error: " + e.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+// =========================================================================
+// Wiring
+// =========================================================================
+document.getElementById("btnSubmit").addEventListener("click", submitJob);
+document.getElementById("btnRefresh").addEventListener("click", loadHistory);
+document.getElementById("btnLogin").addEventListener("click", () => startLogin().catch(e => setSubmitStatus(e.message)));
+document.getElementById("btnLogout").addEventListener("click", startLogout);
+
+// =========================================================================
+// Init
+// =========================================================================
+(async function init() {
+  try {
+    await loadAuthConfig();
+    updateAuthButtons();
+    if (isAuthenticated()) {
+      loadHistory();
+    } else {
+      setSubmitStatus("Sign in to get started.");
+    }
+  } catch (e) {
+    setSubmitStatus("Init error: " + e.message);
+  }
+})();
+</script>
+
+</body>
+</html>

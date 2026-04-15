@@ -1,121 +1,245 @@
-# aws-cognito-app
+# aws-cartoonify
 
-Serverless CRUD API for managing notes, secured with Amazon Cognito JWT authentication. No EC2 — fully Lambda + API Gateway + DynamoDB, with a static S3-hosted SPA frontend.
+Serverless image-to-cartoon service on AWS. Users sign in via Cognito, upload
+a photo, pick a style, and a queue-driven worker invokes Amazon Nova Canvas
+via Bedrock to generate a cartoon. Results live in S3 for 7 days and are
+accessed through short-lived presigned URLs.
 
 ## Architecture
 
 ```
-Browser → S3 (SPA) → Cognito Hosted UI → callback.html (PKCE) → sessionStorage (JWT)
+Browser → S3 (SPA, public) → Cognito Hosted UI → callback.html (PKCE) → sessionStorage (JWT)
+
+Browser ──POST /upload-url──→ API Gateway (JWT) ─→ upload_url Lambda ─→ presigned POST
+Browser ──PUT (direct)─────→ S3 media bucket (private, originals/<owner>/<job_id>.<ext>)
+
+Browser ──POST /generate───→ API Gateway (JWT) ─→ submit Lambda ─→ DynamoDB (status=submitted)
+                                                                 └→ SQS cartoonify-jobs
                                                                         ↓
-Browser → API Gateway (JWT authorizer) → Lambda (Python 3.14) → DynamoDB (notes-cognito)
+                                                     Worker Lambda (container image, Bedrock)
+                                                     • Pillow: EXIF strip, 1024×1024 crop/resize
+                                                     • Bedrock Nova Canvas (IMAGE_VARIATION)
+                                                     • S3 put cartoons/<owner>/<job_id>.png
+                                                     • DynamoDB (status=complete)
+
+Browser ──GET /result/{job_id}─→ result Lambda  → presigned GET URLs
+Browser ──GET /history────────→ history Lambda → newest 50 for owner
+Browser ──DELETE /history/{id}→ delete Lambda  → removes S3 objects + row
 ```
 
-**AWS services:** API Gateway (HTTP API v2), Lambda, DynamoDB, Cognito User Pool, S3, IAM, CloudWatch Logs
+**AWS services:** API Gateway HTTP API v2, Lambda (zip + container), SQS,
+DynamoDB, S3 (web + media), Cognito User Pool, ECR, Bedrock (Nova Canvas),
+CloudWatch Logs.
 
-## Project Structure
+## Project structure
 
 ```
-aws-cognito-app/
-├── 01-lambdas/          # Backend IaC + Lambda source
-│   └── code/            # Python Lambda handlers
-├── 02-webapp/           # Frontend SPA + S3 upload IaC
-├── apply.sh             # Full deploy (backend → frontend)
-├── destroy.sh           # Full teardown (frontend → backend)
-├── validate.sh          # Post-deploy: prints app URL and OAuth config
-└── check_env.sh         # Validates aws, terraform, jq + AWS credentials
+aws-cartoonify/
+├── 01-backend/          # Terraform: SQS, DynamoDB, S3, ECR, Cognito
+├── 02-worker/
+│   └── cartoonify/      # Dockerfile + app.py + requirements.txt (Bedrock worker)
+├── 03-api/
+│   ├── code/            # Python Lambda handlers (zipped together)
+│   │   ├── common.py    # Shared helpers (JWT claims, styles, quota, job_id)
+│   │   ├── upload_url.py
+│   │   ├── submit.py
+│   │   ├── result.py
+│   │   ├── history.py
+│   │   └── delete.py
+│   ├── api.tf
+│   ├── data.tf          # Looks up backend resources by name
+│   ├── lambda-api.tf    # Zip-packaged API Lambdas (one shared role)
+│   └── lambda-worker.tf # Container-image worker Lambda + SQS trigger
+├── 04-webapp/           # Vanilla SPA + upload Terraform
+├── apply.sh             # Full deploy (4 stages)
+├── destroy.sh           # Full teardown (reverse order)
+├── validate.sh          # Prints app URL + API endpoint
+└── check_env.sh         # Validates aws/terraform/docker/jq/envsubst + Bedrock access
 ```
 
-## Deploy / Destroy
+## Deploy / destroy
 
 ```bash
-./apply.sh      # Full deploy — runs check_env, terraform for both stages, builds config.json
-./destroy.sh    # Full teardown — destroys webapp first, then backend
-./validate.sh   # Print app URL after deploy
+./apply.sh      # 01-backend → 02-worker (docker push) → 03-api → 04-webapp
+./destroy.sh    # 04-webapp → 03-api → empty media bucket → 01-backend
+./validate.sh   # Print app URL + API endpoint
 ```
 
-**Prerequisites:** `aws`, `terraform`, `jq` in PATH; AWS credentials configured (`AWS_PROFILE` or env vars).
+**Prerequisites:** `aws`, `terraform`, `docker`, `jq`, `envsubst` in PATH;
+AWS credentials configured; Bedrock access to `amazon.nova-canvas-v1:0`
+enabled in the Bedrock console for your account.
 
-Region is hardcoded to `us-east-1` in the scripts and Terraform providers.
+Region is hardcoded to `us-east-1` — Nova Canvas is not available everywhere.
 
-## Backend: 01-lambdas
+## Stage 01: backend (`01-backend/`)
 
-Terraform deploys all backend resources. Each Lambda has its own IAM role with least-privilege DynamoDB permissions.
+Creates everything that has no dependency on the worker image:
 
-| Route | Lambda file | DynamoDB op |
+| Resource | Name |
+|---|---|
+| DynamoDB table | `cartoonify-jobs` (PK=owner, SK=job_id, TTL=ttl) |
+| SQS queue | `cartoonify-jobs` (visibility 180s) |
+| ECR repo | `cartoonify` |
+| S3 web bucket | `cartoonify-web-<hex>` (public read, SPA hosting) |
+| S3 media bucket | `cartoonify-media-<hex>` (private, CORS, 7-day lifecycle on originals/ + cartoons/) |
+| Cognito User Pool | `cartoonify-user-pool` (email sign-in, self-service signup) |
+| Cognito domain | `cartoonify-auth-<hex>.auth.us-east-1.amazoncognito.com` |
+
+**Outputs** (read by `apply.sh`): `web_bucket_name`, `media_bucket_name`,
+`cognito_domain`, `app_client_id`, `worker_repo_name`, `jobs_table_name`,
+`jobs_queue_url`.
+
+## Stage 02: worker image (`02-worker/cartoonify/`)
+
+No Terraform. `apply.sh` runs `docker buildx build --platform linux/amd64`,
+tags with `worker-rc1`, pushes to the ECR repo from stage 01. The build
+checks ECR first and skips if the tag already exists.
+
+**Image contents:** `public.ecr.aws/lambda/python:3.11` base + Pillow +
+`app.py` handler.
+
+**Worker behavior** ([app.py](02-worker/cartoonify/app.py)):
+1. For each SQS Record: parse JSON body `{job_id, owner, style, original_key}`
+2. Mark `status=processing` in DynamoDB
+3. Download original from `cartoonify-media-*/originals/<owner>/<job_id>.*`
+4. Pillow: EXIF-transpose, convert to RGB, center-square-crop, resize to 1024×1024, re-encode PNG
+5. Call Bedrock `invoke_model` on `amazon.nova-canvas-v1:0` with task `IMAGE_VARIATION` (similarityStrength=0.7, cfgScale=8.0)
+6. Upload cartoon PNG to `cartoons/<owner>/<job_id>.png`
+7. Mark `status=complete` + store `cartoon_key`
+
+On exception: mark `status=error` with the first 500 chars of the message, then swallow — the job row's status is the canonical failure signal for the client. The exception is **not** re-raised, so SQS does not redrive.
+
+## Stage 03: API (`03-api/`)
+
+Looks up backend resources by name via `data` sources. Bucket names (which
+have random suffixes) come in as variables from `apply.sh`.
+
+### Routes — all JWT-authorized against the Cognito User Pool
+
+| Method | Path | Lambda | Purpose |
+|---|---|---|---|
+| POST | `/upload-url` | upload_url | Presigned POST with 5 MB limit + exact content-type |
+| POST | `/generate` | submit | Validate style, verify upload, enforce daily quota, enqueue |
+| GET | `/result/{job_id}` | result | Status + presigned GETs for original/cartoon |
+| GET | `/history` | history | Last 50 jobs for owner, newest first |
+| DELETE | `/history/{job_id}` | delete | Remove S3 objects + row |
+
+### Per-user daily quota (100/day)
+
+Enforced in `submit.py` via a DynamoDB KeyCondition query using the time-sorted
+`job_id` format `{epoch_ms_13digits}-{hex8}`:
+
+```python
+Key("owner").eq(sub) & Key("job_id").gte(f"{start_of_utc_day_ms():013d}-")
+```
+
+No GSI needed. The 7-day TTL bounds the scanned rows to ≤700 per user.
+
+### Worker Lambda + SQS trigger
+
+Container image from ECR; 2048 MB memory, 120 s timeout. Event source mapping
+with `batch_size=1` so one Bedrock call per invocation. Bedrock IAM is scoped
+to `arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-canvas-v1:0` only.
+
+### Lambda packaging
+
+All five API Lambdas share one zip of `./code/` and one IAM role. Each has its
+own `aws_lambda_function` resource with a distinct handler. Runtime: `python3.11`.
+Changing any file under `code/` updates all five on the next `apply` because
+they share the same `source_code_hash`.
+
+## Stage 04: webapp (`04-webapp/`)
+
+- `index.html.tmpl` — `${API_BASE}` placeholder; `apply.sh` generates `index.html` via `envsubst`
+- `callback.html` — Cognito PKCE callback (exchanges code → tokens → sessionStorage)
+- `config.json` — generated at deploy time (gitignored)
+- `favicon.ico`
+
+The Terraform in this stage does NOT create the web bucket — it uploads to the
+one created by `01-backend`. The bucket name is passed via `-var=web_bucket_name=`.
+
+## SPA features
+
+- Cognito Hosted UI sign-in/out via PKCE
+- File picker (JPEG/PNG/WebP, 5 MB max, 2048×2048 max) with client-side validation
+- Style dropdown: `studio_ghibli`, `pixar_3d`, `simpsons`, `anime`, `comic_book`, `watercolor`, `pencil_sketch`
+- Submit flow: `/upload-url` → browser POSTs to S3 → `/generate` → poll `/result/{id}` every 2 s
+- Gallery: `/history` on page load, tile per job with download + delete
+
+## Data model
+
+**DynamoDB `cartoonify-jobs`** (PAY_PER_REQUEST, TTL on `ttl`):
+
+| Attribute | Type | Purpose |
 |---|---|---|
-| `POST /notes` | `code/create.py` | PutItem |
-| `GET /notes` | `code/list.py` | Query |
-| `GET /notes/{id}` | `code/get.py` | GetItem |
-| `PUT /notes/{id}` | `code/update.py` | UpdateItem |
-| `DELETE /notes/{id}` | `code/delete.py` | DeleteItem |
+| `owner` | S (PK) | Cognito `sub` claim |
+| `job_id` | S (SK) | `{epoch_ms:013d}-{hex8}` — time-sortable |
+| `status` | S | submitted → processing → complete \| error |
+| `style` | S | One of the seven style IDs |
+| `original_key` | S | `originals/<owner>/<job_id>.<ext>` |
+| `cartoon_key` | S | `cartoons/<owner>/<job_id>.png` (when complete) |
+| `created_at` | N | Epoch seconds |
+| `created_at_ms` | N | Epoch ms (matches `job_id` prefix) |
+| `completed_at` | N | Epoch seconds (complete/error) |
+| `error_message` | S | First 500 chars of exception on failure |
+| `ttl` | N | Epoch seconds, created_at + 7 days |
 
-**DynamoDB table:** `notes-cognito`
-- Partition key: `owner` (Cognito `sub` claim)
-- Sort key: `id` (UUID)
-- Billing: PAY_PER_REQUEST
+**S3 `cartoonify-media-<hex>`** (private, 7-day lifecycle):
+- `originals/<owner>/<job_id>.<ext>` — user uploads (presigned POST, ≤5 MB)
+- `cartoons/<owner>/<job_id>.png` — generated cartoons (worker PUT, ~1 MB)
 
-**Lambda packaging:** All `code/` Python files are zipped together via `archive_file` in `lambda-get.tf`. Handler format: `<filename>.lambda_handler`. Runtime: `python3.14`.
+## Image size controls
 
-**Environment variable injected into all Lambdas:**
-```
-NOTES_TABLE_NAME=notes-cognito
-```
+| Layer | Enforcement |
+|---|---|
+| Client | File `accept=` attribute, `File.size ≤ 5 MB`, probe dimensions ≤ 2048 px |
+| Presigned POST | `content-length-range [0, 5242880]`, `Content-Type` exact match |
+| Worker | EXIF strip, RGB convert, center-square-crop, resize to 1024×1024 before Bedrock |
 
-**API Gateway authorizer:** JWT type, issuer = Cognito User Pool endpoint, audience = app client ID. Validates `Authorization: Bearer <token>` before invoking any Lambda.
+## Authorization model
 
-**CORS:** Origins `*` (tighten for production), methods GET/POST/PUT/DELETE/OPTIONS.
+- API Gateway validates JWT signature against Cognito JWKS before any Lambda runs
+- Every Lambda extracts `sub` from `event.requestContext.authorizer.jwt.claims`
+- DynamoDB PK is `owner` — users cannot read or delete rows they don't own
+- S3 access uses short-lived presigned URLs generated by the API (never direct bucket access)
 
-## Frontend: 02-webapp
+## Modifying code
 
-Vanilla JS SPA — no build step, no npm.
+| Change | Action |
+|---|---|
+| Anything under `03-api/code/` | Re-run `./apply.sh` — Terraform re-zips and updates all five API Lambdas |
+| `02-worker/cartoonify/*.py` or `Dockerfile` | Bump `WORKER_TAG` in `apply.sh` (e.g. `worker-rc2`), then re-run `./apply.sh` — the image-exists check will rebuild + push, and Terraform will update the worker Lambda's `image_uri` |
+| Style prompts | Edit `STYLE_PROMPTS` in `02-worker/cartoonify/app.py` **and** `ALLOWED_STYLES` in `03-api/code/common.py` **and** `<option>` list in `04-webapp/index.html.tmpl` |
+| Upload limits | Edit `MAX_UPLOAD_BYTES` in `03-api/code/common.py` **and** the two `MAX_*` constants in `04-webapp/index.html.tmpl` |
 
-- `index.html.tmpl` — template with `${API_BASE}` placeholder; `apply.sh` generates `index.html` via `envsubst`
-- `callback.html` — handles Cognito redirect, exchanges auth code for tokens (PKCE), stores tokens in `sessionStorage`
-- `config.json` — generated at deploy time by `apply.sh`; never commit this file
-
-**Generated `config.json` shape:**
-```json
-{
-  "cognitoDomain": "notes-auth-<random>.auth.us-east-1.amazoncognito.com",
-  "clientId": "<cognito-app-client-id>",
-  "redirectUri": "https://cnotes-web-<random>.s3.us-east-1.amazonaws.com/callback.html",
-  "apiBaseUrl": "https://<api-id>.execute-api.us-east-1.amazonaws.com"
-}
-```
-
-The `02-webapp` Terraform module does NOT create the S3 bucket — it uploads to the bucket created by `01-lambdas`. The bucket name is discovered dynamically by prefix `cnotes` in `apply.sh`.
-
-## Cognito
-
-- User Pool: `notes-user-pool`, email-based sign-in
-- Hosted UI domain: `notes-auth-<random>`
-- App client: SPA (no client secret), Authorization Code + PKCE flow, scopes: openid/email/profile
-- Callback URL: `https://<bucket>.s3.<region>.amazonaws.com/callback.html`
-
-## Terraform State
-
-Local state only — `.terraform/` directories inside `01-lambdas/` and `02-webapp/`. No remote backend. Do not delete these directories between apply and destroy.
-
-## Modifying Lambda Code
-
-1. Edit files under `01-lambdas/code/`
-2. Re-run `./apply.sh` — Terraform detects the zip hash change and redeploys affected functions
-
-No local testing setup. Test against deployed infrastructure using `curl` with a JWT from `sessionStorage`.
-
-## Manual API Test
+## Manual API test
 
 ```bash
-JWT="<paste from browser sessionStorage.access_token>"
-BASE="<from validate.sh output>"
+JWT="<paste sessionStorage.access_token from browser>"
+BASE=$(cd 03-api && terraform output -raw api_endpoint)
 
-curl -H "Authorization: Bearer $JWT" $BASE/notes
-curl -X POST -H "Authorization: Bearer $JWT" -H "Content-Type: application/json" \
-  -d '{"title":"Test","note":"Body"}' $BASE/notes
+# Request presigned upload
+curl -s -X POST "$BASE/upload-url" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"content_type":"image/jpeg"}'
+
+# Submit a job (after uploading to the presigned URL)
+curl -s -X POST "$BASE/generate" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"job_id":"...","key":"originals/.../....jpg","style":"pixar_3d"}'
+
+# Poll
+curl -s -H "Authorization: Bearer $JWT" "$BASE/result/<job_id>"
+
+# Gallery
+curl -s -H "Authorization: Bearer $JWT" "$BASE/history"
 ```
 
-## Authorization Model
+## Terraform state
 
-- API Gateway validates JWT signature against Cognito JWKS before Lambda runs
-- Lambda extracts `sub` claim as `owner`; all DynamoDB keys include `owner` as partition key
-- Users can only read/write their own notes — enforced at the storage layer
+Local state only — `.terraform/` directories inside each stage. No remote
+backend. `destroy.sh` reads `web_bucket_name` and `media_bucket_name` from
+`01-backend`'s state before destroying, so don't remove those files between
+`apply.sh` and `destroy.sh`.

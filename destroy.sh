@@ -1,132 +1,70 @@
 #!/bin/bash
-# ================================================================================
-# File: destroy.sh
-# ================================================================================
-#
-# Purpose:
-#   Tears down the Notes application stack deployed by apply.sh.
-#
-#   Destruction order:
-#     1. Static web client (02-webapp)
-#     2. Backend services (01-lambdas)
-#
-#   The S3 web bucket is discovered dynamically and passed into the
-#   web teardown module to ensure the correct resources are targeted.
-#
-# ================================================================================
-# GLOBAL CONFIGURATION
-# ================================================================================
+# ==============================================================================
+# destroy.sh
+# ==============================================================================
+# Tears down the cartoonify stack in reverse order:
+#   04-webapp  → 03-api → 01-backend
+# The 02-worker stage has no Terraform state (build only).
+# ==============================================================================
 
-# ------------------------------------------------------------------------------
-# AWS REGION CONFIGURATION
-# ------------------------------------------------------------------------------
-# Sets the default AWS region used by:
-#   - AWS CLI commands
-#   - Terraform providers
-# ------------------------------------------------------------------------------
 export AWS_DEFAULT_REGION="us-east-1"
-
-# ------------------------------------------------------------------------------
-# STRICT SHELL EXECUTION MODE
-# ------------------------------------------------------------------------------
-# Enforces defensive Bash behavior:
-#   -e  Exit immediately on command failure
-#   -u  Treat unset variables as errors
-#   -o pipefail  Fail pipelines if any command fails
-# ------------------------------------------------------------------------------
 set -euo pipefail
 
-# ================================================================================
-# WEB BUCKET DISCOVERY
-# ================================================================================
+# ------------------------------------------------------------------------------
+# Discover names before backend is destroyed.
+# ------------------------------------------------------------------------------
+pushd 01-backend > /dev/null
+WEB_BUCKET=$(terraform output -raw web_bucket_name 2>/dev/null || true)
+MEDIA_BUCKET=$(terraform output -raw media_bucket_name 2>/dev/null || true)
+popd > /dev/null
 
-# ------------------------------------------------------------------------------
-# SELECT WEB BUCKET BY PREFIX
-# ------------------------------------------------------------------------------
-# Finds the S3 bucket hosting the static web client by matching a
-# known prefix. Exactly one bucket must match.
-# ------------------------------------------------------------------------------
-PREFIX="cnotes"
-
-read -r -a BUCKETS <<< "$(aws s3api list-buckets \
-  --query "Buckets[?starts_with(Name, \`${PREFIX}\`)].Name" \
-  --output text)"
-
-# ------------------------------------------------------------------------------
-# ENFORCE A SINGLE BUCKET MATCH
-# ------------------------------------------------------------------------------
-# Prevents accidental teardown of unintended buckets.
-# ------------------------------------------------------------------------------
-if [[ "${#BUCKETS[@]}" -eq 0 ]]; then
-  echo "ERROR: No S3 bucket found starting with '${PREFIX}'" >&2
-  exit 1
-elif [[ "${#BUCKETS[@]}" -gt 1 ]]; then
-  echo "ERROR: Multiple S3 buckets found starting with '${PREFIX}':" >&2
-  for b in "${BUCKETS[@]}"; do
-    echo "  - ${b}" >&2
-  done
+if [ -z "${WEB_BUCKET}" ] || [ -z "${MEDIA_BUCKET}" ]; then
+  echo "ERROR: Could not read bucket names from 01-backend Terraform state."
+  echo "       Is 01-backend initialized and applied?"
   exit 1
 fi
 
-BUCKET_NAME="${BUCKETS[0]}"
+# ==============================================================================
+# STAGE 04 — WEBAPP
+# ==============================================================================
+echo "NOTE: Destroying webapp..."
 
-# ================================================================================
-# STATIC WEB APPLICATION TEARDOWN
-# ================================================================================
+pushd 04-webapp > /dev/null
+terraform init
+terraform destroy -auto-approve -var="web_bucket_name=${WEB_BUCKET}"
+popd > /dev/null
 
-# ------------------------------------------------------------------------------
-# DESTROY STATIC WEB CLIENT
-# ------------------------------------------------------------------------------
-# Destroys the S3-hosted static web application and associated
-# Terraform-managed resources in the 02-webapp directory.
-# ------------------------------------------------------------------------------
-echo "NOTE: Destroying Web Application..."
+# ==============================================================================
+# STAGE 03 — API
+# ==============================================================================
+echo "NOTE: Destroying API..."
 
-cd 02-webapp || {
-  echo "ERROR: Directory 02-webapp not found."
-  exit 1
-}
-
+pushd 03-api > /dev/null
 terraform init
 terraform destroy -auto-approve \
-  -var="web_bucket_name=${BUCKET_NAME}"
+  -var="media_bucket_name=${MEDIA_BUCKET}" \
+  -var="worker_image_tag=worker-rc1"
+popd > /dev/null
 
-cd .. || exit 1
+# ==============================================================================
+# MEDIA BUCKET CLEANUP
+# ==============================================================================
+# The media bucket may contain uploaded originals and generated cartoons
+# that are retained for 7 days by lifecycle rules. Empty it before backend
+# Terraform destroys the bucket (force_destroy is enabled, but explicit
+# empty is clearer and avoids partial-failure surprises).
+# ==============================================================================
+echo "NOTE: Emptying media bucket ${MEDIA_BUCKET}..."
+aws s3 rm "s3://${MEDIA_BUCKET}" --recursive || true
 
-# ================================================================================
-# BACKEND INFRASTRUCTURE TEARDOWN
-# ================================================================================
+# ==============================================================================
+# STAGE 01 — BACKEND
+# ==============================================================================
+echo "NOTE: Destroying backend..."
 
-# ------------------------------------------------------------------------------
-# DESTROY BACKEND SERVICES
-# ------------------------------------------------------------------------------
-# Removes backend infrastructure provisioned by Terraform, including:
-#   - Lambda functions
-#   - API Gateway routes and integrations
-# ------------------------------------------------------------------------------
-echo "NOTE: Destroying Lambdas and API Gateway..."
-
-cd 01-lambdas || {
-  echo "ERROR: Directory 01-lambdas not found."
-  exit 1
-}
-
+pushd 01-backend > /dev/null
 terraform init
 terraform destroy -auto-approve
+popd > /dev/null
 
-cd .. || exit 1
-
-# ================================================================================
-# COMPLETION
-# ================================================================================
-
-# ------------------------------------------------------------------------------
-# TEARDOWN COMPLETE
-# ------------------------------------------------------------------------------
-# Indicates that all Terraform stacks were destroyed successfully.
-# ------------------------------------------------------------------------------
 echo "NOTE: Infrastructure teardown complete."
-
-# ================================================================================
-# END OF SCRIPT
-# ================================================================================

@@ -1,240 +1,141 @@
-# AWS Serverless Authenticated CRUD API with Cognito, Lambda, DynamoDB, and API Gateway
+# aws-cartoonify
 
-This project delivers a fully automated **serverless, authenticated CRUD
-(Create, Read, Update, Delete) API** on AWS, built using **Amazon API Gateway**,
-**AWS Lambda**, **Amazon DynamoDB**, and **Amazon Cognito**.
+Serverless **image-to-cartoon** web application on AWS. Users sign in with
+Cognito, upload a photo, pick a cartoon style, and a queue-driven worker
+invokes **Amazon Nova Canvas** (via Bedrock) to generate a stylized cartoon.
+Results are stored privately in S3 for 7 days and served to the owner through
+short-lived presigned URLs.
 
-It uses **Terraform** and **Python (boto3)** to provision and deploy a
-**stateless, REST-style backend** secured with **JWT-based authentication**,
-exposing HTTP endpoints for managing simple “notes” data — all without running
-or managing any EC2 instances.
+Built on a **serverless, event-driven** architecture using **API Gateway
+(HTTP API v2)**, **Cognito** (PKCE auth), **SQS**, **DynamoDB**, **Lambda**
+(zip + container image), **ECR**, **S3**, and **Bedrock** — provisioned with
+**Terraform** in four stages.
 
-Authentication and authorization are handled natively by **Amazon Cognito**,
-allowing users to sign in with email-based credentials and obtain JWT access
-tokens that are validated directly by API Gateway before requests reach Lambda.
+## Features
 
-For testing and demonstration purposes, a lightweight **HTML web frontend**
-integrates with Cognito’s Hosted UI and interacts directly with the secured API,
-allowing authenticated users to create, view, update, and delete notes from a
-browser.
+- **Cognito-authenticated** SPA with self-service signup (email-based)
+- **Style presets:** Studio Ghibli · Pixar 3D · Simpsons · Anime · Comic Book · Watercolor · Pencil Sketch
+- **Asynchronous pipeline:** browser uploads original → SQS queue → Bedrock worker → S3
+- **Per-user history gallery** (last 50 cartoons, newest first)
+- **Safety rails:**
+  - 5 MB file size cap (client-side + S3 presigned POST policy)
+  - 2048×2048 max dimensions (client-side check)
+  - 100 generations per user per UTC day (enforced in DynamoDB query)
+  - 7-day S3 lifecycle + DynamoDB TTL retention
+  - Bedrock IAM scoped to the Nova Canvas model only
 
-![webapp](webapp.png)
+## Architecture
 
-This design follows a **serverless microservice architecture** where API Gateway
-routes authenticated requests to dedicated Lambda functions, DynamoDB provides
-fully managed persistence, and AWS handles scaling, availability, and fault
-tolerance automatically.
+```
+Browser → S3 (SPA) → Cognito Hosted UI → callback.html (PKCE) → sessionStorage (JWT)
 
-![diagram](aws-cognito-app.png)
+Browser ──POST /upload-url──→ API Gateway (JWT) → upload_url Lambda → presigned POST
+Browser ──PUT (direct)─────→ S3 media bucket (private)
 
-## Key capabilities demonstrated
+Browser ──POST /generate───→ API Gateway (JWT) → submit Lambda → DynamoDB (submitted) + SQS
+                                                                        ↓
+                                                     Worker Lambda (container image)
+                                                     • Pillow normalize → 1024×1024 PNG
+                                                     • Bedrock Nova Canvas IMAGE_VARIATION
+                                                     • S3 put cartoons/<owner>/<job_id>.png
+                                                     • DynamoDB (status=complete)
 
-1. **Authenticated Serverless CRUD API** – REST-style endpoints protected by
-   Cognito JWT authorizers, backed by Lambda functions for full CRUD operations.
-2. **Stateless Compute Layer** – Independent, stateless Lambda functions enable
-   horizontal scaling with zero idle cost.
-3. **Managed NoSQL Storage** – DynamoDB with on-demand capacity provides
-   low-latency, fully managed persistence.
-4. **Native AWS Authentication** – Cognito User Pools issue and manage JWT
-   tokens, eliminating the need for custom authentication logic in Lambda.
-5. **Infrastructure as Code (IaC)** – Terraform provisions API Gateway routes,
-   Cognito resources, Lambda functions, IAM roles, DynamoDB tables, and
-   supporting infrastructure in a repeatable, auditable way.
-6. **Browser-Based Test Client** – A simple static HTML frontend demonstrates
-   secure, real-time interaction with the API using standard OAuth flows.
+Browser ──GET /result/{job_id}─→ result Lambda (presigned GET URLs)
+Browser ──GET /history────────→ history Lambda (newest 50 for owner)
+Browser ──DELETE /history/{id}→ delete Lambda (S3 + row)
+```
 
-Together, these components form a **clean, minimal reference architecture** for
-building **secure serverless APIs on AWS** — suitable for learning,
-prototyping, or extending into more advanced event-driven and
-identity-aware microservices.
+## Deployment stages
 
-## API Gateway Endpoints
-
-The **Notes API** exposes REST-style CRUD endpoints through **Amazon API Gateway
-(HTTP API)** and is secured using a **Cognito JWT authorizer**. All requests
-must include a valid **Authorization: Bearer <JWT>** header issued by the
-Cognito User Pool.
-
-### API Endpoint Summary (Authenticated)
-
-| Method | Path | Purpose | Auth | DynamoDB Operation |
-|------|------|--------|------|--------------------|
-| POST | `/notes` | Create a new note for the authenticated user | Required | `PutItem` |
-| GET | `/notes` | List all notes owned by the authenticated user | Required | `Query` (owner = JWT `sub`) |
-| GET | `/notes/{id}` | Retrieve a single note by ID | Required | `GetItem` (owner + id) |
-| PUT | `/notes/{id}` | Update an existing note owned by the authenticated user | Required | `UpdateItem` |
-| DELETE | `/notes/{id}` | Delete a note by ID owned by the authenticated user | Required | `DeleteItem` |
-
-
-### Request & Response Characteristics (Authenticated)
-
-| Aspect | Behavior |
-|-----|--------|
-| Authentication | Amazon Cognito JWT authorizer |
-| Authorization | Enforced via DynamoDB partition key (`owner`) |
-| Identity Source | JWT `sub` claim |
-| Content Type | `application/json` |
-| Owner Model | Derived from authenticated user |
-| Response Format | JSON |
-| Clients | curl, browser, any HTTP client |
-| Error Handling | Standard HTTP status codes |
-
-Each request is authenticated at the API Gateway layer before reaching Lambda.
-The authenticated user identity is derived from the JWT and used to scope data
-access in DynamoDB.
-
-All endpoints return JSON and work with both CLI and browser-based clients.
-
-> Note: In this demo, the note `owner` is derived from the authenticated
-> Cognito user (JWT `sub` claim), not hardcoded.
-
----
-
-### POST /notes
-
-**Purpose:**  
-Creates a new note owned by the authenticated user.
-
-**Request Headers:**
-Authorization: Bearer <JWT_ACCESS_TOKEN>
-Content-Type: application/json
-
-**Request Body (JSON):**
-{
-  "title": "Test Note 1",
-  "note": "This is test note 1"
-}
-
-**Parameters:**
-
-| Field | Type | Required | Description |
-|------|------|----------|-------------|
-| title | string | Yes | Note title |
-| note | string | Yes | Note body/content |
-
-**Example Request:**
-curl -s -X POST https://<api-id>.execute-api.us-east-1.amazonaws.com/notes \
-  -H "Authorization: Bearer <JWT_ACCESS_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Test Note 1","note":"This is test note 1"}'
-
-**Example Response (201):**
-{
-  "id": "2f2d0c5a-9f5f-4d7d-9e2c-1c8a5b8e3c21",
-  "title": "Test Note 1",
-  "note": "This is test note 1"
-}
-
----
-
-### GET /notes
-
-**Purpose:**  
-Lists all notes owned by the authenticated user.
-
-**Example Request:**
-curl -s https://<api-id>.execute-api.us-east-1.amazonaws.com/notes \
-  -H "Authorization: Bearer <JWT_ACCESS_TOKEN>"
-
----
-
-### GET /notes/{id}
-
-**Purpose:**  
-Retrieves a single note by ID for the authenticated user.
-
----
-
-### PUT /notes/{id}
-
-**Purpose:**  
-Updates an existing note owned by the authenticated user.
-
----
-
-### DELETE /notes/{id}
-
-**Purpose:**  
-Deletes a note by ID owned by the authenticated user.
-
+| Stage | What it does |
+|---|---|
+| **01-backend** | SQS, DynamoDB, ECR, S3 (web + media), Cognito User Pool |
+| **02-worker**  | `docker buildx` the Bedrock worker image, push to ECR |
+| **03-api**     | API Gateway HTTP API + 5 JWT-authorized Lambdas + worker Lambda + SQS trigger |
+| **04-webapp**  | Generate `index.html` / `config.json`, upload SPA assets to the web bucket |
 
 ## Prerequisites
 
-* [An AWS Account](https://aws.amazon.com/console/)
-* [Install AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-* [Install Terraform](https://developer.hashicorp.com/terraform/install)
+- [AWS account](https://aws.amazon.com/console/) with Bedrock enabled
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- [Terraform](https://developer.hashicorp.com/terraform/install)
+- [Docker](https://docs.docker.com/engine/install/) (with `buildx`)
+- `jq`, `envsubst` in PATH
+- **Amazon Nova Canvas access enabled** in your Bedrock console:
+  https://console.aws.amazon.com/bedrock/home?region=us-east-1#/modelaccess
 
-If this is your first time following along, we recommend starting with this video:  
-**[AWS + Terraform: Easy Setup](https://www.youtube.com/watch?v=9clW3VQLyxA)** – it walks through configuring your AWS credentials, Terraform backend, and CLI environment.
+Region is hardcoded to `us-east-1` (Nova Canvas availability).
 
-## Download this Repository
-
-```bash
-git clone https://github.com/mamonaco1973/aws-cognito-app.git
-cd aws-cognito-app
-```
-
-## Build the Code
-
-Run [check_env](check_env.sh) to validate your environment, then run [apply](apply.sh) to provision the infrastructure.
+## Deploy
 
 ```bash
-~/aws-cognito-app$ ./apply.sh
-NOTE: Running environment validation...
-NOTE: Validating that required commands are found in your PATH.
-NOTE: aws is found in the current PATH.
-NOTE: terraform is found in the current PATH.
-NOTE: jq is found in the current PATH.
-NOTE: All required commands are available.
-NOTE: Checking AWS cli connection.
-NOTE: Successfully logged into AWS.
-
-Initializing the backend...
+git clone <repo> aws-cartoonify
+cd aws-cartoonify
+./apply.sh
 ```
-### Build Results
 
-When the deployment completes, the following resources are created:
+`check_env.sh` runs first and will fail fast if Bedrock model access is not
+enabled. On success, `validate.sh` prints the app URL:
 
-- **Core Infrastructure:**  
-  - Fully serverless architecture—no EC2 instances, containers, or VPC networking required  
-  - Terraform-managed provisioning of API Gateway, Lambda, DynamoDB, Cognito, and S3 resources  
-  - Stateless, request-driven design where each API call is handled independently  
+```
+================================================================================
+  Cartoonify — Deployment validated!
+================================================================================
+  API : https://<api-id>.execute-api.us-east-1.amazonaws.com
+  Web : https://cartoonify-web-<hex>.s3.us-east-1.amazonaws.com/index.html
+================================================================================
+```
 
-- **Security, Identity & IAM:**  
-  - **Amazon Cognito User Pool** providing managed user authentication and JWT token issuance  
-  - API Gateway **JWT authorizer** validating Cognito access tokens before invoking Lambda  
-  - IAM roles for Lambda execution with scoped permissions for DynamoDB and CloudWatch  
-  - Principle-of-least-privilege policies applied per Lambda function  
-  - No long-lived credentials embedded in application code  
+Open the web URL, sign up, sign in, upload an image, pick a style, and click
+**Cartoonify**. The result appears in ~15–30 s.
 
-- **Amazon DynamoDB Table:**  
-  - Single table storing notes keyed by authenticated user (`owner`) and note `id`  
-  - `owner` value derived from the Cognito JWT (`sub` claim) for per-user data isolation  
-  - Each item stores `title`, `note`, `created_at`, and `updated_at` attributes  
-  - On-demand capacity mode for automatic scaling and cost efficiency  
+## Destroy
 
-- **AWS Lambda Functions:**  
-  - Multiple Python-based Lambda functions implementing Create, Read, Update, List, and Delete operations  
-  - Each function is independently deployed and mapped to a specific API route  
-  - Extracts user identity from API Gateway authorizer context rather than custom auth logic  
-  - Emits structured logs to CloudWatch for observability and debugging  
+```bash
+./destroy.sh
+```
 
-- **Amazon API Gateway:**  
-  - HTTP API exposing REST-style `/notes` and `/notes/{id}` endpoints  
-  - Cognito JWT authorizer enforces authentication at the edge  
-  - Routes authenticated requests to the appropriate Lambda function based on HTTP method and path  
-  - Provides secure, stateless HTTPS access for browser and CLI clients  
+Destroys `04-webapp → 03-api → media bucket contents → 01-backend`. The media
+bucket is emptied explicitly before backend teardown so that lifecycle-pending
+objects do not block `aws_s3_bucket` deletion.
 
-- **Static Web Application (S3):**  
-  - S3 bucket configured for static website hosting  
-  - `index.html` integrates with Cognito Hosted UI for user sign-in and token retrieval  
-  - Frontend includes JWT access tokens when calling secured API Gateway endpoints  
+## API endpoints
 
-- **Automation & Validation:**  
-  - `apply.sh`, `destroy.sh`, and `check_env.sh` scripts automate provisioning, teardown, and environment validation  
-  - Entire workflow runs using Terraform and AWS CLI—no manual AWS console setup required  
+All require `Authorization: Bearer <Cognito JWT>`.
 
-Together, these resources form a **secure, identity-aware serverless CRUD application**
-that demonstrates modern AWS API design principles—**simple, scalable, and fully
-managed**, with authentication enforced natively at the platform level.
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/upload-url` | Returns a presigned S3 POST with size + content-type policy |
+| POST | `/generate` | Validates, enforces quota, writes job row, enqueues on SQS |
+| GET | `/result/{job_id}` | Single-job status + presigned GETs for original/cartoon |
+| GET | `/history` | Last 50 jobs for the authenticated user |
+| DELETE | `/history/{job_id}` | Removes S3 objects + DynamoDB row |
 
+Daily quota responses are `429` with `{"error":"Daily limit of 100 reached", ...}`.
+
+## Cost notes
+
+- Nova Canvas is roughly **$0.04 per 1024×1024 image** (check current pricing).
+- 100-per-user/day cap → worst case ≈ **$4/user/day** on Bedrock alone.
+- SQS, Lambda, DynamoDB, S3 costs for this workload are negligible.
+
+## Project layout
+
+```
+aws-cartoonify/
+├── 01-backend/        # Terraform: Cognito, DynamoDB, SQS, S3, ECR
+├── 02-worker/
+│   └── cartoonify/    # Dockerfile + app.py + requirements.txt
+├── 03-api/
+│   ├── code/          # Python Lambda handlers + common.py
+│   ├── api.tf         # HTTP API + JWT authorizer + 5 routes
+│   ├── data.tf
+│   ├── lambda-api.tf  # 5 zip-packaged API Lambdas (shared role)
+│   └── lambda-worker.tf  # Container-image worker Lambda + SQS ESM
+├── 04-webapp/         # Vanilla SPA + upload Terraform
+├── apply.sh  destroy.sh  validate.sh  check_env.sh
+└── CLAUDE.md
+```
+
+See [CLAUDE.md](CLAUDE.md) for a deeper walkthrough of the data model,
+IAM scoping, and how to modify styles, limits, and the worker image.

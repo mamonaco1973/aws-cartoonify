@@ -1,40 +1,47 @@
 #!/bin/bash
+# ==============================================================================
+# check_env.sh
+# ==============================================================================
+# Validates the local tooling and AWS credentials needed for apply.sh and
+# destroy.sh. Also confirms that Bedrock access to Nova Canvas is available
+# in the target region.
+# ==============================================================================
+
+set -u
+
+REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 
 echo "NOTE: Validating that required commands are found in your PATH."
-# List of required commands
-commands=("aws" "terraform" "jq")
-
-# Flag to track if all commands are found
-all_found=true
-
-# Iterate through each command and check if it's available
+commands=("aws" "terraform" "docker" "jq" "envsubst")
+missing=0
 for cmd in "${commands[@]}"; do
-  if ! command -v "$cmd" &> /dev/null; then
+  if ! command -v "$cmd" > /dev/null 2>&1; then
     echo "ERROR: $cmd is not found in the current PATH."
-    all_found=false
+    missing=1
   else
     echo "NOTE: $cmd is found in the current PATH."
   fi
 done
 
-# Final status
-if [ "$all_found" = true ]; then
-  echo "NOTE: All required commands are available."
-else
-  echo "ERROR: One or more commands are missing."
+if [ "$missing" -ne 0 ]; then
+  echo "ERROR: One or more required commands are missing."
   exit 1
 fi
 
 echo "NOTE: Checking AWS cli connection."
-
-aws sts get-caller-identity --query "Account" --output text >> /dev/null
-
-# Check the return code of the login command
-if [ $? -ne 0 ]; then
-  echo "ERROR: Failed to connect to AWS. Please check your credentials and environment variables."
+if ! aws sts get-caller-identity --query "Account" --output text > /dev/null 2>&1; then
+  echo "ERROR: Failed to connect to AWS. Check credentials/environment."
   exit 1
-else
-  echo "NOTE: Successfully logged into AWS."
 fi
+echo "NOTE: Successfully logged into AWS."
 
-
+echo "NOTE: Checking Bedrock access to Amazon Nova Canvas in ${REGION}."
+if ! aws bedrock list-foundation-models --region "${REGION}" \
+       --query "modelSummaries[?modelId=='amazon.nova-canvas-v1:0'].modelId" \
+       --output text 2>/dev/null | grep -q "amazon.nova-canvas-v1:0"; then
+  echo "ERROR: Amazon Nova Canvas is not available in ${REGION}."
+  echo "       Enable model access in the Bedrock console:"
+  echo "         https://console.aws.amazon.com/bedrock/home?region=${REGION}#/modelaccess"
+  exit 1
+fi
+echo "NOTE: Nova Canvas model is accessible."

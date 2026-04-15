@@ -1,254 +1,129 @@
 #!/bin/bash
-# ================================================================================
-# File: apply.sh
-# ================================================================================
+# ==============================================================================
+# apply.sh
+# ==============================================================================
+# Orchestrates deployment of the cartoonify stack in four stages:
+#   01-backend : SQS, DynamoDB, S3 buckets (web + media), ECR, Cognito
+#   02-worker  : Docker build of the Bedrock Nova Canvas worker → ECR
+#   03-api     : API Gateway + 5 API Lambdas + worker Lambda + SQS trigger
+#   04-webapp  : Upload SPA (index.html, callback.html, config.json, favicon)
+#                to the web bucket created in 01-backend
 #
-# Purpose:
-#   Orchestrates end-to-end deployment of the Notes application stack.
-#
-#   Workflow:
-#     - Validate the local environment and AWS credentials
-#     - Deploy backend (Lambdas, API Gateway, Cognito) via Terraform
-#     - Discover the web S3 bucket and derive its region-aware URL
-#     - Generate the web client artifacts (index.html, config.json)
-#     - Deploy the web client via Terraform, targeting the existing bucket
-#
-# ================================================================================
-# GLOBAL CONFIGURATION
-# ================================================================================
+# Requires: aws, terraform, docker, jq, envsubst
+# ==============================================================================
 
-# ------------------------------------------------------------------------------
-# AWS REGION CONFIGURATION
-# ------------------------------------------------------------------------------
-# Defines the default AWS region used by AWS CLI and Terraform.
-# ------------------------------------------------------------------------------
 export AWS_DEFAULT_REGION="us-east-1"
-
-# ------------------------------------------------------------------------------
-# STRICT SHELL EXECUTION MODE
-# ------------------------------------------------------------------------------
-# Enforces defensive shell behavior:
-#   -e  Exit immediately if any command fails
-#   -u  Treat unset variables as errors
-#   -o pipefail  Fail pipelines if any command fails
-# ------------------------------------------------------------------------------
 set -euo pipefail
 
-# ================================================================================
-# ENVIRONMENT PRE-CHECK
-# ================================================================================
+WORKER_TAG="worker-rc1"
 
 # ------------------------------------------------------------------------------
-# ENVIRONMENT VALIDATION
-# ------------------------------------------------------------------------------
-# Ensures required tools, credentials, and environment variables exist
-# before any deployment is attempted.
+# Pre-flight
 # ------------------------------------------------------------------------------
 echo "NOTE: Running environment validation..."
-
 ./check_env.sh
-if [ $? -ne 0 ]; then
-  echo "ERROR: Environment validation failed. Exiting."
+
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+if [ -z "${AWS_ACCOUNT_ID}" ]; then
+  echo "ERROR: Could not retrieve AWS account ID."
   exit 1
 fi
 
-# ================================================================================
-# BACKEND DEPLOYMENT (LAMBDAS + API GATEWAY + COGNITO)
-# ================================================================================
+# ==============================================================================
+# STAGE 01 — BACKEND (S3, DynamoDB, SQS, ECR, Cognito)
+# ==============================================================================
+echo "NOTE: Stage 01 — provisioning backend resources..."
 
-# ------------------------------------------------------------------------------
-# DEPLOY BACKEND INFRASTRUCTURE
-# ------------------------------------------------------------------------------
-# Applies Terraform in 01-lambdas to create the backend stack, including:
-#   - Lambda functions
-#   - API Gateway (HTTP API)
-#   - Cognito (domain + app client outputs are read later)
-# ------------------------------------------------------------------------------
-echo "NOTE: Building Lambdas and API Gateway..."
-
-cd 01-lambdas || {
-  echo "ERROR: 01-lambdas directory missing."
-  exit 1
-}
-
+pushd 01-backend > /dev/null
 terraform init
 terraform apply -auto-approve
 
-cd .. || exit 1
+WEB_BUCKET=$(terraform output -raw web_bucket_name)
+MEDIA_BUCKET=$(terraform output -raw media_bucket_name)
+COGNITO_DOMAIN_PREFIX=$(terraform output -raw cognito_domain)
+CLIENT_ID=$(terraform output -raw app_client_id)
+WORKER_REPO=$(terraform output -raw worker_repo_name)
+popd > /dev/null
 
-# ================================================================================
-# WEB BUCKET DISCOVERY
-# ================================================================================
+echo "NOTE: web_bucket   = ${WEB_BUCKET}"
+echo "NOTE: media_bucket = ${MEDIA_BUCKET}"
 
-# ------------------------------------------------------------------------------
-# SELECT WEB BUCKET BY PREFIX
-# ------------------------------------------------------------------------------
-# Finds the S3 bucket used for hosting the web client by matching a
-# known prefix. Exactly one bucket must match.
-# ------------------------------------------------------------------------------
-PREFIX="cnotes"
+# ==============================================================================
+# STAGE 02 — DOCKER BUILD + PUSH (Bedrock worker image)
+# ==============================================================================
+echo "NOTE: Stage 02 — building worker Docker image..."
 
-read -r -a BUCKETS <<< "$(aws s3api list-buckets \
-  --query "Buckets[?starts_with(Name, \`${PREFIX}\`)].Name" \
-  --output text)"
+ECR_HOST="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+IMAGE_URI="${ECR_HOST}/${WORKER_REPO}:${WORKER_TAG}"
 
-# ------------------------------------------------------------------------------
-# ENFORCE A SINGLE BUCKET MATCH
-# ------------------------------------------------------------------------------
-# Avoids deploying to the wrong bucket by requiring exactly one match.
-# ------------------------------------------------------------------------------
-if [[ "${#BUCKETS[@]}" -eq 0 ]]; then
-  echo "ERROR: No S3 bucket found starting with '${PREFIX}'" >&2
-  exit 1
-elif [[ "${#BUCKETS[@]}" -gt 1 ]]; then
-  echo "ERROR: Multiple S3 buckets found starting with '${PREFIX}':" >&2
-  for b in "${BUCKETS[@]}"; do
-    echo "  - ${b}" >&2
-  done
-  exit 1
+aws ecr get-login-password --region "${AWS_DEFAULT_REGION}" \
+  | docker login --username AWS --password-stdin "${ECR_HOST}"
+
+pushd 02-worker/cartoonify > /dev/null
+
+if aws ecr describe-images \
+      --repository-name "${WORKER_REPO}" \
+      --image-ids imageTag="${WORKER_TAG}" \
+      --region "${AWS_DEFAULT_REGION}" > /dev/null 2>&1; then
+  echo "NOTE: Image already exists in ECR: ${IMAGE_URI}"
+else
+  echo "NOTE: Building image ${IMAGE_URI}"
+  docker buildx build \
+    --platform linux/amd64 \
+    --provenance=false \
+    --sbom=false \
+    --output type=docker \
+    -t "${IMAGE_URI}" .
+  docker push "${IMAGE_URI}"
 fi
 
-BUCKET_NAME="${BUCKETS[0]}"
-echo "NOTE: Bucket name is ${BUCKET_NAME}"
+popd > /dev/null
 
-# ------------------------------------------------------------------------------
-# DETERMINE BUCKET REGION
-# ------------------------------------------------------------------------------
-# S3 returns "None" for buckets in us-east-1. Normalize this to the
-# canonical region name so we can build a correct bucket URL.
-# ------------------------------------------------------------------------------
-REGION=$(aws s3api get-bucket-location \
-  --bucket "${BUCKET_NAME}" \
-  --query "LocationConstraint" \
-  --output text)
+# ==============================================================================
+# STAGE 03 — API (API Gateway, API Lambdas, worker Lambda, SQS trigger)
+# ==============================================================================
+echo "NOTE: Stage 03 — deploying API Gateway and Lambdas..."
 
-if [[ "${REGION}" == "None" ]]; then
-  REGION="us-east-1"
-fi
+pushd 03-api > /dev/null
+terraform init
+terraform apply -auto-approve \
+  -var="media_bucket_name=${MEDIA_BUCKET}" \
+  -var="worker_image_tag=${WORKER_TAG}"
 
-# ------------------------------------------------------------------------------
-# BUILD REGION-AWARE BUCKET URL
-# ------------------------------------------------------------------------------
-# Used for redirect URIs (callback.html) and other hosted assets.
-# ------------------------------------------------------------------------------
-BUCKET_URL="https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com"
+API_BASE=$(terraform output -raw api_endpoint)
+popd > /dev/null
 
-# ================================================================================
-# WEB CLIENT CONFIGURATION
-# ================================================================================
+echo "NOTE: api_endpoint = ${API_BASE}"
 
-# ------------------------------------------------------------------------------
-# LOOK UP API GATEWAY ENDPOINT
-# ------------------------------------------------------------------------------
-# Retrieves the API ID by name, then reads the API endpoint URL for
-# injection into the web client template and config.json.
-# ------------------------------------------------------------------------------
-API_ID=$(aws apigatewayv2 get-apis \
-  --query "Items[?Name=='notes-api-cognito'].ApiId" \
-  --output text)
+# ==============================================================================
+# STAGE 04 — WEB APP (generate index.html + config.json, upload to web bucket)
+# ==============================================================================
+echo "NOTE: Stage 04 — building and uploading SPA..."
 
-if [[ -z "${API_ID}" || "${API_ID}" == "None" ]]; then
-  echo "ERROR: No API found with name 'notes-api-cognito'"
-  exit 1
-fi
+pushd 04-webapp > /dev/null
 
-URL=$(aws apigatewayv2 get-api \
-  --api-id "${API_ID}" \
-  --query "ApiEndpoint" \
-  --output text)
+export API_BASE
+envsubst '${API_BASE}' < index.html.tmpl > index.html
 
-export API_BASE="${URL}"
-echo "NOTE: API Gateway URL - ${API_BASE}"
-
-# ================================================================================
-# WEB CLIENT BUILD + DEPLOYMENT
-# ================================================================================
-
-# ------------------------------------------------------------------------------
-# BUILD WEB CLIENT ARTIFACTS
-# ------------------------------------------------------------------------------
-# Generates:
-#   - index.html from index.html.tmpl (API_BASE substitution)
-#   - config.json using Cognito outputs and the bucket callback URL
-# ------------------------------------------------------------------------------
-echo "NOTE: Building web application..."
-
-cd 02-webapp || {
-  echo "ERROR: 02-webapp directory missing."
-  exit 1
-}
-
-envsubst '${API_BASE}' < index.html.tmpl > index.html || {
-  echo "ERROR: Failed to generate index.html."
-  exit 1
-}
-
-# ------------------------------------------------------------------------------
-# READ COGNITO OUTPUTS FROM BACKEND STACK
-# ------------------------------------------------------------------------------
-# Reads Terraform outputs from 01-lambdas to configure the SPA login:
-#   - Cognito domain prefix
-#   - App client ID
-# ------------------------------------------------------------------------------
-echo "NOTE: Reading Cognito outputs..."
-
-COGNITO_DOMAIN_PREFIX=$(cd ../01-lambdas && terraform output -raw cognito_domain)
-CLIENT_ID=$(cd ../01-lambdas && terraform output -raw app_client_id)
-
-if [[ -z "${COGNITO_DOMAIN_PREFIX}" || -z "${CLIENT_ID}" ]]; then
-  echo "ERROR: Failed to read Cognito outputs."
-  exit 1
-fi
-
-# ------------------------------------------------------------------------------
-# BUILD COGNITO DOMAIN
-# ------------------------------------------------------------------------------
-# Constructs the Cognito Hosted UI domain from the domain prefix and
-# the region derived from the web bucket.
-# ------------------------------------------------------------------------------
-COGNITO_DOMAIN="${COGNITO_DOMAIN_PREFIX}.auth.${REGION}.amazoncognito.com"
-
-# ------------------------------------------------------------------------------
-# WRITE WEB CLIENT CONFIGURATION
-# ------------------------------------------------------------------------------
-# Writes config.json consumed by the SPA. redirectUri must match the
-# Hosted UI callback URL registered in the Cognito app client.
-# ------------------------------------------------------------------------------
-echo "NOTE: Writing config.json..."
+COGNITO_DOMAIN="${COGNITO_DOMAIN_PREFIX}.auth.${AWS_DEFAULT_REGION}.amazoncognito.com"
+BUCKET_URL="https://${WEB_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com"
 
 cat > config.json <<EOF
 {
   "cognitoDomain": "${COGNITO_DOMAIN}",
-  "clientId": "${CLIENT_ID}",
-  "redirectUri": "${BUCKET_URL}/callback.html",
-  "apiBaseUrl": "${API_BASE}"
+  "clientId":      "${CLIENT_ID}",
+  "redirectUri":   "${BUCKET_URL}/callback.html",
+  "apiBaseUrl":    "${API_BASE}"
 }
 EOF
 
-# ------------------------------------------------------------------------------
-# DEPLOY WEB CLIENT (TERRAFORM)
-# ------------------------------------------------------------------------------
-# Applies Terraform in 02-webapp, targeting an existing bucket passed
-# via web_bucket_name. This module should not create the bucket.
-# ------------------------------------------------------------------------------
 terraform init
-terraform apply -auto-approve \
-  -var="web_bucket_name=${BUCKET_NAME}"
+terraform apply -auto-approve -var="web_bucket_name=${WEB_BUCKET}"
 
-cd .. || exit 1
+popd > /dev/null
 
-# ================================================================================
-# POST-DEPLOYMENT VALIDATION (OPTIONAL)
-# ================================================================================
-
-# ------------------------------------------------------------------------------
-# RUNTIME VALIDATION
-# ------------------------------------------------------------------------------
-# Enable once validate.sh is implemented.
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# Validation
+# ==============================================================================
 echo "NOTE: Running post-deployment validation..."
 ./validate.sh
-
-# ================================================================================
-# END OF SCRIPT
-# ================================================================================
