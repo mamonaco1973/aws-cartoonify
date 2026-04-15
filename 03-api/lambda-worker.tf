@@ -64,7 +64,14 @@ resource "aws_iam_role_policy" "worker_inline" {
         Sid    = "BedrockInvokeStabilityControlStructure",
         Effect = "Allow",
         Action = ["bedrock:InvokeModel"],
-        Resource = "arn:aws:bedrock:${data.aws_region.current.id}::foundation-model/stability.stable-image-control-structure-v1:0"
+        Resource = [
+          # Cross-region US inference profile (actual invocation target)
+          "arn:aws:bedrock:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:inference-profile/us.stability.stable-image-control-structure-v1:0",
+          # Underlying foundation models in every region the profile may route to
+          "arn:aws:bedrock:us-east-1::foundation-model/stability.stable-image-control-structure-v1:0",
+          "arn:aws:bedrock:us-east-2::foundation-model/stability.stable-image-control-structure-v1:0",
+          "arn:aws:bedrock:us-west-2::foundation-model/stability.stable-image-control-structure-v1:0"
+        ]
       }
     ]
   })
@@ -85,7 +92,7 @@ resource "aws_lambda_function" "worker" {
     variables = {
       JOBS_TABLE_NAME   = data.aws_dynamodb_table.jobs.name
       MEDIA_BUCKET_NAME = var.media_bucket_name
-      BEDROCK_MODEL_ID  = "stability.stable-image-control-structure-v1:0"
+      BEDROCK_MODEL_ID  = "us.stability.stable-image-control-structure-v1:0"
     }
   }
 

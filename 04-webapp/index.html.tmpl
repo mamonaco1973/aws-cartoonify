@@ -231,6 +231,22 @@ function updateAuthButtons() {
   document.getElementById("btnLogout").style.display = loggedIn ? "inline-block" : "none";
 }
 
+function setUiEnabled(enabled) {
+  const ids = ["fileInput", "styleSelect", "btnSubmit", "btnRefresh"];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !enabled;
+  });
+  const gallery = document.getElementById("gallery");
+  gallery.style.pointerEvents = enabled ? "auto" : "none";
+  gallery.style.opacity       = enabled ? "1"    : "0.5";
+  if (!enabled) {
+    gallery.innerHTML = "";
+    document.getElementById("currentJob").style.display = "none";
+    setGalleryStatus("");
+  }
+}
+
 function b64url(bytes) {
   let bin = "";
   const arr = new Uint8Array(bytes);
@@ -275,6 +291,9 @@ function startLogout() {
                    "token_received_at", "pkce_code_verifier", "oauth_state"]) {
     sessionStorage.removeItem(k);
   }
+  setUiEnabled(false);
+  updateAuthButtons();
+  setSubmitStatus("Signing out…");
   const logout = "https://" + AUTH.cognitoDomain + "/logout"
     + "?client_id=" + encodeURIComponent(AUTH.clientId)
     + "&logout_uri=" + encodeURIComponent(window.location.origin + "/index.html");
@@ -518,13 +537,15 @@ document.getElementById("btnLogout").addEventListener("click", startLogout);
 // Init
 // =========================================================================
 (async function init() {
+  setUiEnabled(false);
+  setSubmitStatus("Sign in to get started.");
   try {
     await loadAuthConfig();
     updateAuthButtons();
     if (isAuthenticated()) {
+      setUiEnabled(true);
+      setSubmitStatus("");
       loadHistory();
-    } else {
-      setSubmitStatus("Sign in to get started.");
     }
   } catch (e) {
     setSubmitStatus("Init error: " + e.message);

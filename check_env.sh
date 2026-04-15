@@ -35,14 +35,14 @@ if ! aws sts get-caller-identity --query "Account" --output text > /dev/null 2>&
 fi
 echo "NOTE: Successfully logged into AWS."
 
-MODEL_ID="stability.stable-image-control-structure-v1:0"
-echo "NOTE: Checking Bedrock access to ${MODEL_ID} in ${REGION}."
-if ! aws bedrock list-foundation-models --region "${REGION}" \
-       --query "modelSummaries[?modelId=='${MODEL_ID}'].modelId" \
-       --output text 2>/dev/null | grep -q "${MODEL_ID}"; then
-  echo "ERROR: ${MODEL_ID} is not available in ${REGION}."
-  echo "       Enable model access in the Bedrock console:"
+PROFILE_ID="us.stability.stable-image-control-structure-v1:0"
+echo "NOTE: Checking Bedrock inference profile ${PROFILE_ID} in ${REGION}."
+if ! aws bedrock list-inference-profiles --region "${REGION}" \
+       --query "inferenceProfileSummaries[?inferenceProfileId=='${PROFILE_ID}'].inferenceProfileId" \
+       --output text 2>/dev/null | grep -q "${PROFILE_ID}"; then
+  echo "ERROR: Inference profile ${PROFILE_ID} is not available in ${REGION}."
+  echo "       Enable access to the underlying foundation model in the Bedrock console:"
   echo "         https://console.aws.amazon.com/bedrock/home?region=${REGION}#/modelaccess"
   exit 1
 fi
-echo "NOTE: Bedrock model is accessible."
+echo "NOTE: Bedrock inference profile is accessible."

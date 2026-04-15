@@ -43,7 +43,7 @@ JOBS_TABLE_NAME  = os.environ["JOBS_TABLE_NAME"]
 MEDIA_BUCKET     = os.environ["MEDIA_BUCKET_NAME"]
 BEDROCK_MODEL_ID = os.environ.get(
     "BEDROCK_MODEL_ID",
-    "stability.stable-image-control-structure-v1:0",
+    "us.stability.stable-image-control-structure-v1:0",
 )
 
 TARGET_SIZE      = 1024   # square output
