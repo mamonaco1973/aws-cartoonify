@@ -49,6 +49,31 @@ Browser ──GET /history────────→ history Lambda (newest 50 
 Browser ──DELETE /history/{id}→ delete Lambda (S3 + row)
 ```
 
+See [aws-cartoonify.drawio](aws-cartoonify.drawio) for a numbered-flow architecture
+diagram that walks through every call in the create-cartoon path (① auth → ⑫ status
+update). Open in [draw.io](https://app.diagrams.net/).
+
+## Job lifecycle
+
+Every job moves through this state machine. The DynamoDB `status` field is the
+single source of truth — both the SPA gallery and `/result/{job_id}` read it.
+
+```mermaid
+stateDiagram-v2
+    [*] --> submitted: POST /generate (submit Lambda writes row + enqueues SQS)
+    submitted --> processing: worker pulls SQS message, marks status
+    processing --> complete: Bedrock returns image, S3 put, status update
+    processing --> error: exception (Bedrock failure, decode error, S3 write fail) — message in error_message
+    complete --> [*]: 7-day TTL deletes row + S3 lifecycle deletes objects
+    error --> [*]: 7-day TTL
+```
+
+Notes:
+- The worker **swallows exceptions** so SQS does not redrive — the row's
+  `status=error` is the canonical failure signal for the SPA.
+- The SPA gallery auto-refreshes every 10 s while any tile is `submitted` or
+  `processing`, then stops.
+
 ## Deployment stages
 
 | Stage | What it does |
