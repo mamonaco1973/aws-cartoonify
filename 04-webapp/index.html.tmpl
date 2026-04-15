@@ -205,11 +205,13 @@
 const API_BASE = "${API_BASE}";
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_DIM   = 2048;
-const POLL_MS   = 2000;
-const POLL_MAX  = 90;   // ~3 minutes
+const POLL_MS            = 2000;
+const POLL_MAX           = 90;   // ~3 minutes
+const GALLERY_REFRESH_MS = 10000; // auto-refresh while any job is pending
 
 let AUTH = null;
-let pollTimer = null;
+let pollTimer    = null;
+let galleryTimer = null;
 
 async function loadAuthConfig() {
   const res = await fetch("/config.json", { cache: "no-store" });
@@ -454,10 +456,22 @@ async function loadHistory() {
   setGalleryStatus("Loading...");
   try {
     const res = await api("/history");
-    renderGallery(res.items || []);
-    setGalleryStatus(res.items.length ? "" : "No cartoons yet. Create one!");
+    const items = res.items || [];
+    renderGallery(items);
+    setGalleryStatus(items.length ? "" : "No cartoons yet. Create one!");
+    scheduleGalleryRefresh(items);
   } catch (e) {
     setGalleryStatus("Error loading history: " + e.message);
+  }
+}
+
+// Auto-refresh the gallery every 10s while any job is still submitted or
+// processing. Clears itself once everything has reached a terminal state.
+function scheduleGalleryRefresh(items) {
+  if (galleryTimer) { clearTimeout(galleryTimer); galleryTimer = null; }
+  const pending = items.some(it => it.status === "submitted" || it.status === "processing");
+  if (pending) {
+    galleryTimer = setTimeout(loadHistory, GALLERY_REFRESH_MS);
   }
 }
 
