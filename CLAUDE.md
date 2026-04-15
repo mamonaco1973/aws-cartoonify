@@ -130,7 +130,7 @@ have random suffixes) come in as variables from `apply.sh`.
 | GET | `/history` | history | Last 50 jobs for owner, newest first |
 | DELETE | `/history/{job_id}` | delete | Remove S3 objects + row |
 
-### Per-user daily quota (100/day)
+### Per-user daily quota (10/day)
 
 Enforced in `submit.py` via a DynamoDB KeyCondition query using the time-sorted
 `job_id` format `{epoch_ms_13digits}-{hex8}`:
@@ -139,7 +139,7 @@ Enforced in `submit.py` via a DynamoDB KeyCondition query using the time-sorted
 Key("owner").eq(sub) & Key("job_id").gte(f"{start_of_utc_day_ms():013d}-")
 ```
 
-No GSI needed. The 7-day TTL bounds the scanned rows to ≤700 per user.
+No GSI needed. The 7-day TTL bounds the scanned rows to ≤70 per user.
 
 ### Worker Lambda + SQS trigger
 

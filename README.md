@@ -24,7 +24,7 @@ Built on a **serverless, event-driven** architecture using **API Gateway
 - **Safety rails:**
   - 5 MB file size cap (client-side + S3 presigned POST policy)
   - 2048×2048 max dimensions (client-side check)
-  - 100 generations per user per UTC day (enforced in DynamoDB query)
+  - 10 generations per user per UTC day (enforced in DynamoDB query)
   - 7-day S3 lifecycle + DynamoDB TTL retention
   - Bedrock IAM scoped to the configured model + its inference profile only
 
@@ -117,7 +117,7 @@ All require `Authorization: Bearer <Cognito JWT>`.
 | GET | `/history` | Last 50 jobs for the authenticated user |
 | DELETE | `/history/{job_id}` | Removes S3 objects + DynamoDB row |
 
-Daily quota responses are `429` with `{"error":"Daily limit of 100 reached", ...}`.
+Daily quota responses are `429` with `{"error":"Daily limit of 10 reached", ...}`.
 
 ## Changing the Bedrock model
 
@@ -150,7 +150,7 @@ the `invoke_bedrock` payload in
 
 - Image generation is roughly **$0.04 per 1024×1024 image** (check current pricing
   for your chosen model).
-- 100-per-user/day cap → worst case ≈ **$4/user/day** on Bedrock alone.
+- 10-per-user/day cap → worst case ≈ **$0.40/user/day** on Bedrock alone.
 - SQS, Lambda, DynamoDB, S3 costs for this workload are negligible.
 
 ## Project layout

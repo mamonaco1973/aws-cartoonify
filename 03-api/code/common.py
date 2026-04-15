@@ -31,7 +31,7 @@ ALLOWED_CONTENT_TYPES = {
     "image/webp": "webp",
 }
 MAX_UPLOAD_BYTES  = 5 * 1024 * 1024  # 5 MB
-DAILY_QUOTA       = 100
+DAILY_QUOTA       = 10
 JOB_TTL_SECONDS   = 7 * 24 * 3600
 PRESIGNED_GET_TTL = 15 * 60          # 15 minutes
 MAX_PROMPT_EXTRA  = 500              # chars — user-supplied prompt augmentation
