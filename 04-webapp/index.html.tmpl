@@ -234,11 +234,13 @@ function updateAuthButtons() {
 }
 
 function setUiEnabled(enabled) {
-  const ids = ["fileInput", "styleSelect", "btnSubmit", "btnRefresh"];
+  // btnSubmit is driven by updateSubmitButton — it also requires a file.
+  const ids = ["fileInput", "styleSelect", "btnRefresh"];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = !enabled;
   });
+  updateSubmitButton();
   const gallery = document.getElementById("gallery");
   gallery.style.pointerEvents = enabled ? "auto" : "none";
   gallery.style.opacity       = enabled ? "1"    : "0.5";
@@ -247,6 +249,12 @@ function setUiEnabled(enabled) {
     document.getElementById("currentJob").style.display = "none";
     setGalleryStatus("");
   }
+}
+
+function updateSubmitButton() {
+  const btn  = document.getElementById("btnSubmit");
+  const file = document.getElementById("fileInput").files[0];
+  btn.disabled = !isAuthenticated() || !file;
 }
 
 function b64url(bytes) {
@@ -543,6 +551,7 @@ async function deleteJob(job_id) {
 // Wiring
 // =========================================================================
 document.getElementById("btnSubmit").addEventListener("click", submitJob);
+document.getElementById("fileInput").addEventListener("change", updateSubmitButton);
 document.getElementById("btnRefresh").addEventListener("click", loadHistory);
 document.getElementById("btnLogin").addEventListener("click", () => startLogin().catch(e => setSubmitStatus(e.message)));
 document.getElementById("btnLogout").addEventListener("click", startLogout);

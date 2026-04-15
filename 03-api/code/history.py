@@ -31,10 +31,15 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def _presign(key: str) -> str:
+def _presign(key: str, download_filename: str | None = None) -> str:
+    params = {"Bucket": MEDIA_BUCKET, "Key": key}
+    if download_filename:
+        # Forces "Save As" rather than inline render. <img src=...> ignores
+        # Content-Disposition, so the same URL still works for tile display.
+        params["ResponseContentDisposition"] = f'attachment; filename="{download_filename}"'
     return s3.generate_presigned_url(
         "get_object",
-        Params    = {"Bucket": MEDIA_BUCKET, "Key": key},
+        Params    = params,
         ExpiresIn = PRESIGNED_GET_TTL,
     )
 
@@ -61,7 +66,7 @@ def lambda_handler(event, context):
             "created_at": item.get("created_at"),
         }
         if item.get("cartoon_key"):
-            entry["cartoon_url"] = _presign(item["cartoon_key"])
+            entry["cartoon_url"] = _presign(item["cartoon_key"], f"cartoonify-{item['job_id']}.png")
         if item.get("original_key"):
             entry["original_url"] = _presign(item["original_key"])
         if item.get("error_message"):
