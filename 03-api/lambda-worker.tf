@@ -78,6 +78,25 @@ resource "aws_iam_role_policy" "worker_inline" {
             "arn:aws:bedrock:${region}::foundation-model/${var.bedrock_model_id}"
           ]
         )
+      },
+      {
+        # Third-party Bedrock models (e.g. Stability) are gated by an AWS
+        # Marketplace subscription. On InvokeModel, Bedrock checks (and, if
+        # missing, attempts to create) the subscription on behalf of the
+        # invoking principal. Without these permissions the call fails with
+        # AccessDeniedException citing aws-marketplace:ViewSubscriptions /
+        # aws-marketplace:Subscribe. Amazon's own models (Nova, Titan) do not
+        # need this.
+        #
+        # Resource cannot be scoped — Marketplace actions only support "*".
+        Sid    = "BedrockMarketplaceSubscriptionCheck",
+        Effect = "Allow",
+        Action = [
+          "aws-marketplace:ViewSubscriptions",
+          "aws-marketplace:Subscribe",
+          "aws-marketplace:Unsubscribe"
+        ],
+        Resource = "*"
       }
     ]
   })
