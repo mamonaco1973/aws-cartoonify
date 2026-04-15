@@ -1,11 +1,12 @@
 # ================================================================================
-# app.py — Bedrock Nova Canvas cartoonify worker
+# app.py — Bedrock cartoonify worker (Stability Image Control Structure)
 # ================================================================================
 # Purpose:
 #   Lambda consumer for the cartoonify SQS queue. For each message:
 #     1. Download the uploaded original image from S3
 #     2. Normalize (EXIF strip, center-square-crop, downscale to 1024x1024, PNG)
-#     3. Invoke Amazon Nova Canvas (IMAGE_VARIATION) with a style-specific prompt
+#     3. Invoke Stability `stable-image-control-structure-v1:0` — preserves the
+#        photo's composition/pose while regenerating it in the requested style
 #     4. Upload the generated cartoon to S3 under cartoons/<owner>/<job_id>.png
 #     5. Update the DynamoDB job row to status=complete (or status=error)
 #
@@ -20,7 +21,7 @@
 # Environment:
 #   JOBS_TABLE_NAME
 #   MEDIA_BUCKET_NAME
-#   BEDROCK_MODEL_ID  (default: amazon.nova-canvas-v1:0)
+#   BEDROCK_MODEL_ID  (default: stability.stable-image-control-structure-v1:0)
 # ================================================================================
 
 import base64
@@ -40,13 +41,16 @@ from PIL import Image, ImageOps
 AWS_REGION       = os.environ.get("AWS_REGION", "us-east-1")
 JOBS_TABLE_NAME  = os.environ["JOBS_TABLE_NAME"]
 MEDIA_BUCKET     = os.environ["MEDIA_BUCKET_NAME"]
-BEDROCK_MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "amazon.nova-canvas-v1:0")
+BEDROCK_MODEL_ID = os.environ.get(
+    "BEDROCK_MODEL_ID",
+    "stability.stable-image-control-structure-v1:0",
+)
 
-TARGET_SIZE        = 1024          # Nova Canvas square dimension
-SIMILARITY         = 0.7           # 0.2-1.0; higher = closer to source
-CFG_SCALE          = 8.0
-NEGATIVE_PROMPT    = (
-    "blurry, low quality, distorted, extra limbs, deformed, watermark, text"
+TARGET_SIZE      = 1024   # square output
+CONTROL_STRENGTH = 0.7    # 0.0-1.0; higher = stick closer to input composition
+NEGATIVE_PROMPT  = (
+    "photorealistic, realistic photograph, blurry, low quality, "
+    "distorted, deformed, extra limbs, watermark, text, signature"
 )
 
 # ------------------------------------------------------------------------------
@@ -98,28 +102,27 @@ def prepare_image(src_bytes: bytes) -> str:
 
 
 # ------------------------------------------------------------------------------
-# Bedrock Nova Canvas invocation
+# Bedrock invocation — Stability stable-image-control-structure-v1:0
 # ------------------------------------------------------------------------------
-def invoke_nova_canvas(source_b64: str, style_id: str) -> bytes:
-    """Call Nova Canvas IMAGE_VARIATION and return the generated PNG bytes."""
+# Request shape:
+#   { "image": "<b64>", "prompt": "...", "negative_prompt": "...",
+#     "control_strength": 0.0-1.0, "output_format": "png", "seed": 0 }
+# Response shape:
+#   { "seeds": [...], "finish_reasons": ["SUCCESS"|"CONTENT_FILTERED"|...],
+#     "images": ["<b64 png>"] }
+# ------------------------------------------------------------------------------
+def invoke_bedrock(source_b64: str, style_id: str) -> bytes:
+    """Call Stability Control-Structure and return generated PNG bytes."""
     prompt = STYLE_PROMPTS.get(style_id)
     if not prompt:
         raise ValueError(f"Unknown style id: {style_id}")
 
     payload = {
-        "taskType": "IMAGE_VARIATION",
-        "imageVariationParams": {
-            "text":               prompt,
-            "negativeText":       NEGATIVE_PROMPT,
-            "images":             [source_b64],
-            "similarityStrength": SIMILARITY,
-        },
-        "imageGenerationConfig": {
-            "numberOfImages": 1,
-            "height":         TARGET_SIZE,
-            "width":          TARGET_SIZE,
-            "cfgScale":       CFG_SCALE,
-        },
+        "image":            source_b64,
+        "prompt":           prompt,
+        "negative_prompt":  NEGATIVE_PROMPT,
+        "control_strength": CONTROL_STRENGTH,
+        "output_format":    "png",
     }
 
     logger.info("Invoking Bedrock model=%s style=%s", BEDROCK_MODEL_ID, style_id)
@@ -132,8 +135,9 @@ def invoke_nova_canvas(source_b64: str, style_id: str) -> bytes:
 
     body = json.loads(res["body"].read())
 
-    if body.get("error"):
-        raise RuntimeError(f"Bedrock returned error: {body['error']}")
+    finish_reasons = body.get("finish_reasons") or []
+    if finish_reasons and finish_reasons[0] != "SUCCESS":
+        raise RuntimeError(f"Bedrock finish_reason: {finish_reasons[0]}")
 
     images = body.get("images") or []
     if not images:
@@ -202,7 +206,7 @@ def process_message(body: dict) -> None:
     prepared_b64 = prepare_image(src_bytes)
 
     # 3. Bedrock call
-    cartoon_bytes = invoke_nova_canvas(prepared_b64, style)
+    cartoon_bytes = invoke_bedrock(prepared_b64, style)
 
     # 4. Upload result
     cartoon_key = f"cartoons/{owner}/{job_id}.png"

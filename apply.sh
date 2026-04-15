@@ -15,7 +15,7 @@
 export AWS_DEFAULT_REGION="us-east-1"
 set -euo pipefail
 
-WORKER_TAG="worker-rc1"
+WORKER_TAG="worker-rc2"
 
 # ------------------------------------------------------------------------------
 # Pre-flight

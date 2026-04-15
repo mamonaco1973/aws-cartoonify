@@ -35,13 +35,14 @@ if ! aws sts get-caller-identity --query "Account" --output text > /dev/null 2>&
 fi
 echo "NOTE: Successfully logged into AWS."
 
-echo "NOTE: Checking Bedrock access to Amazon Nova Canvas in ${REGION}."
+MODEL_ID="stability.stable-image-control-structure-v1:0"
+echo "NOTE: Checking Bedrock access to ${MODEL_ID} in ${REGION}."
 if ! aws bedrock list-foundation-models --region "${REGION}" \
-       --query "modelSummaries[?modelId=='amazon.nova-canvas-v1:0'].modelId" \
-       --output text 2>/dev/null | grep -q "amazon.nova-canvas-v1:0"; then
-  echo "ERROR: Amazon Nova Canvas is not available in ${REGION}."
+       --query "modelSummaries[?modelId=='${MODEL_ID}'].modelId" \
+       --output text 2>/dev/null | grep -q "${MODEL_ID}"; then
+  echo "ERROR: ${MODEL_ID} is not available in ${REGION}."
   echo "       Enable model access in the Bedrock console:"
   echo "         https://console.aws.amazon.com/bedrock/home?region=${REGION}#/modelaccess"
   exit 1
 fi
-echo "NOTE: Nova Canvas model is accessible."
+echo "NOTE: Bedrock model is accessible."

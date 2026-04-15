@@ -61,10 +61,10 @@ resource "aws_iam_role_policy" "worker_inline" {
         Resource = "${local.media_bucket_arn}/*"
       },
       {
-        Sid    = "BedrockInvokeNovaCanvas",
+        Sid    = "BedrockInvokeStabilityControlStructure",
         Effect = "Allow",
         Action = ["bedrock:InvokeModel"],
-        Resource = "arn:aws:bedrock:${data.aws_region.current.id}::foundation-model/amazon.nova-canvas-v1:0"
+        Resource = "arn:aws:bedrock:${data.aws_region.current.id}::foundation-model/stability.stable-image-control-structure-v1:0"
       }
     ]
   })
@@ -85,7 +85,7 @@ resource "aws_lambda_function" "worker" {
     variables = {
       JOBS_TABLE_NAME   = data.aws_dynamodb_table.jobs.name
       MEDIA_BUCKET_NAME = var.media_bucket_name
-      BEDROCK_MODEL_ID  = "amazon.nova-canvas-v1:0"
+      BEDROCK_MODEL_ID  = "stability.stable-image-control-structure-v1:0"
     }
   }
 
