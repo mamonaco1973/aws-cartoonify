@@ -1,9 +1,13 @@
 # aws-cartoonify
 
 Serverless image-to-cartoon service on AWS. Users sign in via Cognito, upload
-a photo, pick a style, and a queue-driven worker invokes Amazon Nova Canvas
-via Bedrock to generate a cartoon. Results live in S3 for 7 days and are
-accessed through short-lived presigned URLs.
+a photo, pick a style, and a queue-driven worker invokes a Bedrock image model
+(default: Stability `stable-image-control-structure-v1:0` via the `us.*`
+cross-region inference profile) to generate a cartoon. Results live in S3 for
+7 days and are accessed through short-lived presigned URLs.
+
+The Bedrock model is fully parameterized — see
+[Changing the Bedrock model](#changing-the-bedrock-model).
 
 ## Architecture
 
@@ -18,7 +22,7 @@ Browser ──POST /generate───→ API Gateway (JWT) ─→ submit Lambda 
                                                                         ↓
                                                      Worker Lambda (container image, Bedrock)
                                                      • Pillow: EXIF strip, 1024×1024 crop/resize
-                                                     • Bedrock Nova Canvas (IMAGE_VARIATION)
+                                                     • Bedrock invoke_model (control-structure)
                                                      • S3 put cartoons/<owner>/<job_id>.png
                                                      • DynamoDB (status=complete)
 
@@ -28,8 +32,8 @@ Browser ──DELETE /history/{id}→ delete Lambda  → removes S3 objects + ro
 ```
 
 **AWS services:** API Gateway HTTP API v2, Lambda (zip + container), SQS,
-DynamoDB, S3 (web + media), Cognito User Pool, ECR, Bedrock (Nova Canvas),
-CloudWatch Logs.
+DynamoDB, S3 (web + media), Cognito User Pool, ECR, Bedrock (image model —
+configurable), CloudWatch Logs.
 
 ## Project structure
 
@@ -66,10 +70,12 @@ aws-cartoonify/
 ```
 
 **Prerequisites:** `aws`, `terraform`, `docker`, `jq`, `envsubst` in PATH;
-AWS credentials configured; Bedrock access to `amazon.nova-canvas-v1:0`
-enabled in the Bedrock console for your account.
+AWS credentials configured; Bedrock access enabled in the console for the
+model + inference profile configured in [apply.sh](apply.sh) (defaults to
+Stability `stable-image-control-structure-v1:0` / `us.stability.stable-image-control-structure-v1:0`).
 
-Region is hardcoded to `us-east-1` — Nova Canvas is not available everywhere.
+Region is hardcoded to `us-east-1` — the `us.*` cross-region inference profile
+routes from there.
 
 ## Stage 01: backend (`01-backend/`)
 
@@ -103,7 +109,7 @@ checks ECR first and skips if the tag already exists.
 2. Mark `status=processing` in DynamoDB
 3. Download original from `cartoonify-media-*/originals/<owner>/<job_id>.*`
 4. Pillow: EXIF-transpose, convert to RGB, center-square-crop, resize to 1024×1024, re-encode PNG
-5. Call Bedrock `invoke_model` on `amazon.nova-canvas-v1:0` with task `IMAGE_VARIATION` (similarityStrength=0.7, cfgScale=8.0)
+5. Call Bedrock `invoke_model` on `$BEDROCK_MODEL_ID` (default: `us.stability.stable-image-control-structure-v1:0`) with the style prompt, `negative_prompt`, and `control_strength=0.7` — preserves the photo's composition while regenerating it in the requested style
 6. Upload cartoon PNG to `cartoons/<owner>/<job_id>.png`
 7. Mark `status=complete` + store `cartoon_key`
 
@@ -139,7 +145,9 @@ No GSI needed. The 7-day TTL bounds the scanned rows to ≤700 per user.
 
 Container image from ECR; 2048 MB memory, 120 s timeout. Event source mapping
 with `batch_size=1` so one Bedrock call per invocation. Bedrock IAM is scoped
-to `arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-canvas-v1:0` only.
+to `var.bedrock_inference_profile_id` plus the underlying foundation model
+(`var.bedrock_model_id`) in every region the profile may route to
+(`var.bedrock_model_regions`). Values are fed in from [apply.sh](apply.sh).
 
 ### Lambda packaging
 
@@ -211,6 +219,36 @@ one created by `01-backend`. The bucket name is passed via `-var=web_bucket_name
 | `02-worker/cartoonify/*.py` or `Dockerfile` | Bump `WORKER_TAG` in `apply.sh` (e.g. `worker-rc2`), then re-run `./apply.sh` — the image-exists check will rebuild + push, and Terraform will update the worker Lambda's `image_uri` |
 | Style prompts | Edit `STYLE_PROMPTS` in `02-worker/cartoonify/app.py` **and** `ALLOWED_STYLES` in `03-api/code/common.py` **and** `<option>` list in `04-webapp/index.html.tmpl` |
 | Upload limits | Edit `MAX_UPLOAD_BYTES` in `03-api/code/common.py` **and** the two `MAX_*` constants in `04-webapp/index.html.tmpl` |
+| Bedrock model | Edit the three `export BEDROCK_*` lines in [apply.sh](apply.sh) — see below |
+
+## Changing the Bedrock model
+
+The model is parameterized end-to-end. A single edit in [apply.sh](apply.sh)
+retargets the pre-flight probe, the worker Lambda env var, and the worker
+IAM policy:
+
+```bash
+export BEDROCK_MODEL_ID="stability.stable-image-control-structure-v1:0"
+export BEDROCK_INFERENCE_PROFILE_ID="us.stability.stable-image-control-structure-v1:0"
+export BEDROCK_MODEL_REGIONS='["us-east-1","us-east-2","us-west-2"]'
+```
+
+Flow:
+
+- **`check_env.sh`** reads `BEDROCK_INFERENCE_PROFILE_ID` / `BEDROCK_MODEL_ID` (exported by `apply.sh`) and probes `bedrock list-inference-profiles` + a dry-run `invoke-model` before any Terraform runs
+- **`apply.sh`** passes all three values to the 03-api stage as `-var=bedrock_model_id=...` / `-var=bedrock_inference_profile_id=...` / `-var=bedrock_model_regions=...`
+- **`03-api/lambda-worker.tf`** builds the `bedrock:InvokeModel` IAM `Resource` list as `[inference-profile ARN in current region] + [foundation-model ARN for var.bedrock_model_id in each of var.bedrock_model_regions]`, and sets `BEDROCK_MODEL_ID = var.bedrock_inference_profile_id` on the worker Lambda
+- **`02-worker/cartoonify/app.py`** reads `BEDROCK_MODEL_ID` at startup (now required — no default) and passes it to `bedrock.invoke_model`
+
+Note: the worker's `BEDROCK_MODEL_ID` env var is set to the *inference profile*
+ID, not the bare model ID — that's what `invoke_model` expects for cross-region
+routing. The bare model ID (`var.bedrock_model_id`) only shows up in IAM.
+
+If the new model uses a different request/response schema (e.g. Nova Canvas
+`IMAGE_VARIATION` vs. Stability control-structure), also update the
+`invoke_bedrock` payload in
+[02-worker/cartoonify/app.py](02-worker/cartoonify/app.py) and bump
+`WORKER_TAG` in `apply.sh` so the container is rebuilt and pushed.
 
 ## Manual API test
 

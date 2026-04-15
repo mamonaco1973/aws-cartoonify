@@ -3,7 +3,7 @@
 # check_env.sh
 # ==============================================================================
 # Validates the local tooling and AWS credentials needed for apply.sh and
-# destroy.sh. Also confirms that Bedrock access to Nova Canvas is available
+# destroy.sh. Also confirms that the configured Bedrock model is available
 # in the target region.
 # ==============================================================================
 
@@ -35,8 +35,10 @@ if ! aws sts get-caller-identity --query "Account" --output text > /dev/null 2>&
 fi
 echo "NOTE: Successfully logged into AWS."
 
-PROFILE_ID="us.stability.stable-image-control-structure-v1:0"
-MODEL_ID="stability.stable-image-control-structure-v1:0"
+# Bedrock model identifiers are set by apply.sh (single source of truth). The
+# fallbacks here only apply if check_env.sh is run standalone.
+PROFILE_ID="${BEDROCK_INFERENCE_PROFILE_ID:-us.stability.stable-image-control-structure-v1:0}"
+MODEL_ID="${BEDROCK_MODEL_ID:-stability.stable-image-control-structure-v1:0}"
 
 echo "NOTE: Checking Bedrock inference profile ${PROFILE_ID} in ${REGION}."
 

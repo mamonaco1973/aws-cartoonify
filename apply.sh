@@ -4,7 +4,7 @@
 # ==============================================================================
 # Orchestrates deployment of the cartoonify stack in four stages:
 #   01-backend : SQS, DynamoDB, S3 buckets (web + media), ECR, Cognito
-#   02-worker  : Docker build of the Bedrock Nova Canvas worker → ECR
+#   02-worker  : Docker build of the Bedrock worker → ECR
 #   03-api     : API Gateway + 5 API Lambdas + worker Lambda + SQS trigger
 #   04-webapp  : Upload SPA (index.html, callback.html, config.json, favicon)
 #                to the web bucket created in 01-backend
@@ -16,6 +16,19 @@ export AWS_DEFAULT_REGION="us-east-1"
 set -euo pipefail
 
 WORKER_TAG="worker-rc3"
+
+# ------------------------------------------------------------------------------
+# Bedrock model selection — single source of truth.
+#
+# To switch models (e.g. to Nova Canvas or a newer Stability version), change
+# these three values. They flow to check_env.sh (pre-flight probe), the worker
+# Lambda env var (runtime invoke_model call), and the worker IAM policy
+# (Bedrock Resource ARNs). `BEDROCK_MODEL_REGIONS` lists every region the
+# cross-region inference profile may route to — all must appear in IAM.
+# ------------------------------------------------------------------------------
+export BEDROCK_MODEL_ID="stability.stable-image-control-structure-v1:0"
+export BEDROCK_INFERENCE_PROFILE_ID="us.stability.stable-image-control-structure-v1:0"
+export BEDROCK_MODEL_REGIONS='["us-east-1","us-east-2","us-west-2"]'
 
 # ------------------------------------------------------------------------------
 # Pre-flight
@@ -88,7 +101,10 @@ pushd 03-api > /dev/null
 terraform init
 terraform apply -auto-approve \
   -var="media_bucket_name=${MEDIA_BUCKET}" \
-  -var="worker_image_tag=${WORKER_TAG}"
+  -var="worker_image_tag=${WORKER_TAG}" \
+  -var="bedrock_model_id=${BEDROCK_MODEL_ID}" \
+  -var="bedrock_inference_profile_id=${BEDROCK_INFERENCE_PROFILE_ID}" \
+  -var="bedrock_model_regions=${BEDROCK_MODEL_REGIONS}"
 
 API_BASE=$(terraform output -raw api_endpoint)
 popd > /dev/null

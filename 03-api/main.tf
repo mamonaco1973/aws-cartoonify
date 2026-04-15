@@ -23,3 +23,24 @@ variable "worker_image_tag" {
   type    = string
   default = "worker-rc1"
 }
+
+# ------------------------------------------------------------------------------
+# Bedrock model selection — passed in from apply.sh so a single edit there
+# retargets the worker Lambda env var, the worker IAM policy, and the
+# pre-flight check in check_env.sh.
+# ------------------------------------------------------------------------------
+variable "bedrock_model_id" {
+  description = "Bedrock foundation model ID (e.g. stability.stable-image-control-structure-v1:0)."
+  type        = string
+}
+
+variable "bedrock_inference_profile_id" {
+  description = "Cross-region inference profile ID used at invoke time (e.g. us.stability.stable-image-control-structure-v1:0)."
+  type        = string
+}
+
+variable "bedrock_model_regions" {
+  description = "Regions the inference profile may route to. Each needs an IAM Resource entry for the underlying foundation model."
+  type        = list(string)
+  default     = ["us-east-1", "us-east-2", "us-west-2"]
+}

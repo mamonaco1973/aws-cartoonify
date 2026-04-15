@@ -3,10 +3,13 @@
 # ================================================================================
 # Purpose:
 #   Deploys the container-image Lambda that consumes cartoonify jobs from SQS
-#   and invokes Amazon Nova Canvas via Bedrock. The image is produced by the
+#   and invokes a Bedrock foundation model. The image is produced by the
 #   02-worker stage and tagged with var.worker_image_tag.
 #
-#   Bedrock IAM is scoped to the Nova Canvas foundation model only.
+#   The Bedrock model is fully parameterized via var.bedrock_model_id /
+#   var.bedrock_inference_profile_id / var.bedrock_model_regions so it can be
+#   retargeted from apply.sh without editing Terraform. IAM is scoped to that
+#   single model and its inference profile.
 # ================================================================================
 
 # --------------------------------------------------------------------------------
@@ -61,17 +64,20 @@ resource "aws_iam_role_policy" "worker_inline" {
         Resource = "${local.media_bucket_arn}/*"
       },
       {
-        Sid    = "BedrockInvokeStabilityControlStructure",
+        Sid    = "BedrockInvokeModel",
         Effect = "Allow",
         Action = ["bedrock:InvokeModel"],
-        Resource = [
-          # Cross-region US inference profile (actual invocation target)
-          "arn:aws:bedrock:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:inference-profile/us.stability.stable-image-control-structure-v1:0",
-          # Underlying foundation models in every region the profile may route to
-          "arn:aws:bedrock:us-east-1::foundation-model/stability.stable-image-control-structure-v1:0",
-          "arn:aws:bedrock:us-east-2::foundation-model/stability.stable-image-control-structure-v1:0",
-          "arn:aws:bedrock:us-west-2::foundation-model/stability.stable-image-control-structure-v1:0"
-        ]
+        Resource = concat(
+          # Cross-region inference profile (actual invocation target)
+          [
+            "arn:aws:bedrock:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_inference_profile_id}"
+          ],
+          # Underlying foundation model in every region the profile may route to
+          [
+            for region in var.bedrock_model_regions :
+            "arn:aws:bedrock:${region}::foundation-model/${var.bedrock_model_id}"
+          ]
+        )
       }
     ]
   })
@@ -92,7 +98,7 @@ resource "aws_lambda_function" "worker" {
     variables = {
       JOBS_TABLE_NAME   = data.aws_dynamodb_table.jobs.name
       MEDIA_BUCKET_NAME = var.media_bucket_name
-      BEDROCK_MODEL_ID  = "us.stability.stable-image-control-structure-v1:0"
+      BEDROCK_MODEL_ID  = var.bedrock_inference_profile_id
     }
   }
 

@@ -21,7 +21,8 @@
 # Environment:
 #   JOBS_TABLE_NAME
 #   MEDIA_BUCKET_NAME
-#   BEDROCK_MODEL_ID  (default: stability.stable-image-control-structure-v1:0)
+#   BEDROCK_MODEL_ID  — required; set by 03-api Terraform from the values in
+#                       apply.sh (single source of truth for model selection).
 # ================================================================================
 
 import base64
@@ -41,10 +42,7 @@ from PIL import Image, ImageOps
 AWS_REGION       = os.environ.get("AWS_REGION", "us-east-1")
 JOBS_TABLE_NAME  = os.environ["JOBS_TABLE_NAME"]
 MEDIA_BUCKET     = os.environ["MEDIA_BUCKET_NAME"]
-BEDROCK_MODEL_ID = os.environ.get(
-    "BEDROCK_MODEL_ID",
-    "us.stability.stable-image-control-structure-v1:0",
-)
+BEDROCK_MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 
 TARGET_SIZE      = 1024   # square output
 CONTROL_STRENGTH = 0.7    # 0.0-1.0; higher = stick closer to input composition

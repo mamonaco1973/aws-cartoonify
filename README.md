@@ -2,7 +2,9 @@
 
 Serverless **image-to-cartoon** web application on AWS. Users sign in with
 Cognito, upload a photo, pick a cartoon style, and a queue-driven worker
-invokes **Amazon Nova Canvas** (via Bedrock) to generate a stylized cartoon.
+invokes a **Bedrock image model** (default: Stability `stable-image-control-structure-v1:0`,
+via the `us.*` cross-region inference profile) to generate a stylized cartoon.
+The model is fully parameterized — see [Changing the Bedrock model](#changing-the-bedrock-model).
 Results are stored privately in S3 for 7 days and served to the owner through
 short-lived presigned URLs.
 
@@ -22,7 +24,7 @@ Built on a **serverless, event-driven** architecture using **API Gateway
   - 2048×2048 max dimensions (client-side check)
   - 100 generations per user per UTC day (enforced in DynamoDB query)
   - 7-day S3 lifecycle + DynamoDB TTL retention
-  - Bedrock IAM scoped to the Nova Canvas model only
+  - Bedrock IAM scoped to the configured model + its inference profile only
 
 ## Architecture
 
@@ -36,7 +38,7 @@ Browser ──POST /generate───→ API Gateway (JWT) → submit Lambda →
                                                                         ↓
                                                      Worker Lambda (container image)
                                                      • Pillow normalize → 1024×1024 PNG
-                                                     • Bedrock Nova Canvas IMAGE_VARIATION
+                                                     • Bedrock invoke_model (control-structure)
                                                      • S3 put cartoons/<owner>/<job_id>.png
                                                      • DynamoDB (status=complete)
 
@@ -61,10 +63,12 @@ Browser ──DELETE /history/{id}→ delete Lambda (S3 + row)
 - [Terraform](https://developer.hashicorp.com/terraform/install)
 - [Docker](https://docs.docker.com/engine/install/) (with `buildx`)
 - `jq`, `envsubst` in PATH
-- **Amazon Nova Canvas access enabled** in your Bedrock console:
+- **Bedrock access enabled** for the configured model (default: Stability
+  `stable-image-control-structure-v1:0` via the `us.*` inference profile)
+  in your Bedrock console:
   https://console.aws.amazon.com/bedrock/home?region=us-east-1#/modelaccess
 
-Region is hardcoded to `us-east-1` (Nova Canvas availability).
+Region is hardcoded to `us-east-1` (the `us.*` inference profile routes from there).
 
 ## Deploy
 
@@ -113,9 +117,36 @@ All require `Authorization: Bearer <Cognito JWT>`.
 
 Daily quota responses are `429` with `{"error":"Daily limit of 100 reached", ...}`.
 
+## Changing the Bedrock model
+
+The model is parameterized end-to-end. To retarget, edit the three `export`
+lines near the top of [apply.sh](apply.sh):
+
+```bash
+export BEDROCK_MODEL_ID="stability.stable-image-control-structure-v1:0"
+export BEDROCK_INFERENCE_PROFILE_ID="us.stability.stable-image-control-structure-v1:0"
+export BEDROCK_MODEL_REGIONS='["us-east-1","us-east-2","us-west-2"]'
+```
+
+These values flow automatically to:
+
+- **`check_env.sh`** — pre-flight probe that the profile + model are accessible
+- **`03-api/` Terraform** — worker IAM `Resource` ARNs (inference profile + foundation
+  model in every region the profile may route to) and the worker Lambda's
+  `BEDROCK_MODEL_ID` environment variable
+- **`02-worker/cartoonify/app.py`** — reads `BEDROCK_MODEL_ID` at startup and
+  passes it to `bedrock.invoke_model`
+
+If the new model uses a different request/response schema (e.g. Nova Canvas's
+`IMAGE_VARIATION` task vs. Stability's control-structure shape), also update
+the `invoke_bedrock` payload in
+[02-worker/cartoonify/app.py](02-worker/cartoonify/app.py) and bump
+`WORKER_TAG` in [apply.sh](apply.sh) so the new image is built and pushed.
+
 ## Cost notes
 
-- Nova Canvas is roughly **$0.04 per 1024×1024 image** (check current pricing).
+- Image generation is roughly **$0.04 per 1024×1024 image** (check current pricing
+  for your chosen model).
 - 100-per-user/day cap → worst case ≈ **$4/user/day** on Bedrock alone.
 - SQS, Lambda, DynamoDB, S3 costs for this workload are negligible.
 
