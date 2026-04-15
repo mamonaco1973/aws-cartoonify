@@ -48,7 +48,9 @@ TARGET_SIZE      = 1024   # square output
 CONTROL_STRENGTH = 0.7    # 0.0-1.0; higher = stick closer to input composition
 NEGATIVE_PROMPT  = (
     "photorealistic, realistic photograph, blurry, low quality, "
-    "distorted, deformed, extra limbs, watermark, text, signature"
+    "distorted, deformed, extra limbs, watermark, text, signature, "
+    "elderly, old, aged, wrinkles, deep wrinkles, gray hair, "
+    "middle-aged, older person"
 )
 
 # ------------------------------------------------------------------------------
