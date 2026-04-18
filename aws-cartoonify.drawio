@@ -45,7 +45,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="e-browser-api" edge="1" parent="1" source="browser" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=none;spacingLeft=0;spacingTop=-16;labelBorderColor=default;" target="api" value="API calls + JWT">
+        <mxCell id="e-browser-api" edge="1" parent="1" source="browser" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=none;spacingLeft=0;spacingTop=-16;labelBorderColor=none;textShadow=1;" target="api" value="API calls + JWT">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e-api-ddb" edge="1" parent="1" source="api" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=none;spacingLeft=-73;textShadow=1;" target="dynamodb" value="jobs CRUD">
