@@ -1,150 +1,80 @@
 <mxfile host="app.diagrams.net" agent="cartoonify-arch">
   <diagram id="cartoonify-arch" name="Architecture">
-    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1169" pageHeight="650" background="none" math="0" shadow="1">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1000" pageHeight="520" background="none" math="0" shadow="1">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-
-        <!-- AWS cloud border -->
         <mxCell id="aws-border" parent="1" style="whiteSpace=wrap;fillColor=none;rounded=0;labelBackgroundColor=none;fontColor=none;noLabel=1;strokeColor=#232F3E;dashed=1;" value="" vertex="1">
-          <mxGeometry x="170" y="40" width="800" height="500" as="geometry" />
+          <mxGeometry height="430" width="780" x="170" y="40" as="geometry" />
         </mxCell>
         <mxCell id="aws-label" parent="1" style="shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=none;fillColor=none;fontColor=#232F3E;fontSize=14;align=left;labelPosition=right;verticalLabelPosition=middle;verticalAlign=middle;spacing=8;html=1;points=[];" value="AWS Cloud — us-east-1" vertex="1">
-          <mxGeometry x="170" y="10" width="32" height="26.25" as="geometry" />
+          <mxGeometry height="26.25" width="32" x="170" y="10" as="geometry" />
         </mxCell>
-
-        <!-- Browser (outside AWS) -->
-        <mxCell id="browser" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Browser.svg;labelBackgroundColor=none;verticalLabelPosition=bottom;verticalAlign=top;" value="Browser (SPA)" vertex="1">
-          <mxGeometry x="50" y="220" width="57" height="50" as="geometry" />
+        <mxCell id="browser" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Browser.svg;labelBackgroundColor=none;verticalLabelPosition=bottom;verticalAlign=top;textShadow=1;" value="Browser (SPA)" vertex="1">
+          <mxGeometry height="50" width="57" x="60" y="220" as="geometry" />
         </mxCell>
-
-        <!-- Cognito -->
-        <mxCell id="cognito" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cognito;" value="Cognito&lt;div&gt;Hosted UI (PKCE)&lt;/div&gt;" vertex="1">
-          <mxGeometry x="220" y="80" width="50" height="50" as="geometry" />
+        <mxCell id="cognito" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cognito;textShadow=1;" value="Cognito&lt;div&gt;Hosted UI&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="50" x="220" y="80" as="geometry" />
         </mxCell>
-
-        <!-- S3 Web bucket (SPA hosting) -->
-        <mxCell id="s3-web" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" value="S3 Web&lt;div&gt;SPA assets&lt;/div&gt;" vertex="1">
-          <mxGeometry x="220" y="220" width="50" height="50" as="geometry" />
+        <mxCell id="api" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#CC2264;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;textShadow=1;" value="API&lt;div&gt;Gateway + 5 Lambdas&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="50" x="320" y="220" as="geometry" />
         </mxCell>
-
-        <!-- API Gateway -->
-        <mxCell id="api-gw" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#CC2264;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;" value="API Gateway&lt;div&gt;HTTP API v2 (JWT)&lt;/div&gt;" vertex="1">
-          <mxGeometry x="370" y="220" width="50" height="50" as="geometry" />
+        <mxCell id="dynamodb" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;textShadow=1;" value="DynamoDB&lt;div&gt;cartoonify-jobs&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="50" x="500" y="80" as="geometry" />
         </mxCell>
-
-        <!-- API Lambdas cluster -->
-        <mxCell id="api-lambdas" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" value="5 API Lambdas&lt;div&gt;upload_url, submit,&lt;br&gt;result, history, delete&lt;/div&gt;" vertex="1">
-          <mxGeometry x="520" y="220" width="50" height="50" as="geometry" />
+        <mxCell id="s3-media" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;textShadow=1;" value="S3 Media&lt;div&gt;originals + cartoons&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="50" x="500" y="220" as="geometry" />
         </mxCell>
-
-        <!-- SQS -->
-        <mxCell id="sqs" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.simple_queue_service;" value="SQS&lt;div&gt;cartoonify-jobs&lt;/div&gt;" vertex="1">
-          <mxGeometry x="670" y="220" width="50" height="50" as="geometry" />
+        <mxCell id="sqs" parent="1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;textShadow=1;" value="SQS&lt;div&gt;cartoonify-jobs&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="50" x="500" y="370" as="geometry" />
         </mxCell>
-
-        <!-- DynamoDB (right side, top) -->
-        <mxCell id="dynamodb" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;" value="DynamoDB&lt;div&gt;cartoonify-jobs&lt;/div&gt;" vertex="1">
-          <mxGeometry x="850" y="120" width="50" height="50" as="geometry" />
+        <mxCell id="worker" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=middle;verticalAlign=middle;align=left;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;textShadow=1;spacingLeft=4;labelPosition=right;" value="Worker Lambda&lt;div&gt;container&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="50" x="740" y="220" as="geometry" />
         </mxCell>
-
-        <!-- S3 Media (right side, middle) -->
-        <mxCell id="s3-media" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" value="S3 Media&lt;div&gt;originals + cartoons&lt;/div&gt;" vertex="1">
-          <mxGeometry x="850" y="320" width="50" height="50" as="geometry" />
+        <mxCell id="bedrock" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#01A88D;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;textShadow=1;" value="Bedrock&lt;div&gt;Stability model&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="50" x="880" y="360" as="geometry" />
         </mxCell>
-
-        <!-- Worker Lambda (bottom row) -->
-        <mxCell id="worker" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" value="Worker Lambda&lt;div&gt;container image&lt;/div&gt;" vertex="1">
-          <mxGeometry x="520" y="420" width="50" height="50" as="geometry" />
-        </mxCell>
-
-        <!-- Bedrock -->
-        <mxCell id="bedrock" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#01A88D;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;" value="Bedrock&lt;div&gt;Stability control-&lt;br&gt;structure model&lt;/div&gt;" vertex="1">
-          <mxGeometry x="670" y="420" width="50" height="50" as="geometry" />
-        </mxCell>
-
-        <!-- ECR -->
-        <mxCell id="ecr" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elastic_container_registry;" value="ECR&lt;div&gt;worker image&lt;/div&gt;" vertex="1">
-          <mxGeometry x="370" y="420" width="50" height="50" as="geometry" />
-        </mxCell>
-
-        <!-- ===== Edges ===== -->
-
-        <!-- Browser <-> Cognito (PKCE) -->
-        <mxCell id="e-browser-cognito" edge="1" parent="1" source="browser" target="cognito" style="endArrow=classic;startArrow=classic;startFill=1;html=1;rounded=0;dashed=1;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" value="① PKCE login → JWT">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- Browser → S3 Web (GET SPA) -->
-        <mxCell id="e-browser-s3web" edge="1" parent="1" source="browser" target="s3-web" style="endArrow=classic;html=1;rounded=0;dashed=1;labelBackgroundColor=#ffffff;" value="② GET SPA">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- Browser → API Gateway (Bearer JWT) -->
-        <mxCell id="e-browser-apigw" edge="1" parent="1" source="browser" target="api-gw" style="endArrow=classic;html=1;rounded=0;dashed=1;labelBackgroundColor=#ffffff;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" value="③ API + Bearer JWT">
-          <mxGeometry relative="1" as="geometry">
+        <mxCell id="e-browser-cognito" edge="1" parent="1" source="browser" style="endArrow=classic;html=1;rounded=0;dashed=1;labelBackgroundColor=none;spacingLeft=-9;textShadow=1;" target="cognito" value="PKCE login">
+          <mxGeometry relative="1" x="0.1837" y="15" as="geometry">
+            <mxPoint as="offset" />
             <Array as="points">
-              <mxPoint x="200" y="190" />
-              <mxPoint x="350" y="190" />
+              <mxPoint x="90" y="105" />
             </Array>
           </mxGeometry>
         </mxCell>
-
-        <!-- API Gateway → API Lambdas -->
-        <mxCell id="e-apigw-lambdas" edge="1" parent="1" source="api-gw" target="api-lambdas" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=#ffffff;" value="④ routes">
+        <mxCell id="e-browser-api" edge="1" parent="1" source="browser" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=none;spacingLeft=0;spacingTop=-16;" target="api" value="① API calls + JWT">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- API Lambdas → DynamoDB -->
-        <mxCell id="e-lambdas-ddb" edge="1" parent="1" source="api-lambdas" target="dynamodb" style="endArrow=classic;startArrow=classic;startFill=1;html=1;rounded=0;labelBackgroundColor=#ffffff;" value="⑤ jobs CRUD">
+        <mxCell id="e-api-ddb" edge="1" parent="1" source="api" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=none;spacingLeft=-73;textShadow=1;" target="dynamodb" value="jobs CRUD">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- API Lambdas → S3 Media (presign / head) -->
-        <mxCell id="e-lambdas-s3media" edge="1" parent="1" source="api-lambdas" target="s3-media" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=#ffffff;" value="⑥ presign URLs / head">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- API Lambdas → SQS -->
-        <mxCell id="e-lambdas-sqs" edge="1" parent="1" source="api-lambdas" target="sqs" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=#ffffff;" value="⑦ enqueue job">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- Browser → S3 Media (direct upload + cartoon download via presigned URLs) -->
-        <mxCell id="e-browser-s3media" edge="1" parent="1" source="browser" target="s3-media" style="endArrow=classic;startArrow=classic;startFill=1;html=1;rounded=0;dashed=1;labelBackgroundColor=#ffffff;" value="⑧ PUT original / GET cartoon (presigned)">
+        <mxCell id="e-api-s3" edge="1" parent="1" source="api" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=none;spacingTop=-16;textShadow=1;" target="s3-media" value="presign URLs">
           <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-api-sqs" edge="1" parent="1" source="api" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=none;spacingLeft=-45;spacingTop=34;textShadow=1;" target="sqs" value="② enqueue job">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-sqs-worker" edge="1" parent="1" source="sqs" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=none;spacingLeft=64;textShadow=1;" target="worker" value="③ trigger">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-worker-bedrock" edge="1" parent="1" source="worker" style="endArrow=classic;rounded=0;labelBackgroundColor=#ffffff;html=1;convertToSvg=1;textShadow=1;" target="bedrock" value="④ invoke_model">
+          <mxGeometry relative="1" x="0.3333" y="42" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-worker-s3" edge="1" parent="1" source="worker" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=none;spacingTop=-17;textShadow=1;" target="s3-media" value="read original / write cartoon">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-worker-ddb" edge="1" parent="1" source="worker" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=none;spacingTop=-7;textShadow=1;" target="dynamodb" value="⑤ status=complete">
+          <mxGeometry relative="1" x="0.3939" y="-5" as="geometry">
+            <mxPoint as="offset" />
             <Array as="points">
-              <mxPoint x="78" y="570" />
-              <mxPoint x="875" y="570" />
+              <mxPoint x="765" y="105" />
             </Array>
           </mxGeometry>
         </mxCell>
-
-        <!-- SQS → Worker Lambda (event source mapping) -->
-        <mxCell id="e-sqs-worker" edge="1" parent="1" source="sqs" target="worker" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=#ffffff;" value="⑨ event source mapping">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- Worker → Bedrock -->
-        <mxCell id="e-worker-bedrock" edge="1" parent="1" source="worker" target="bedrock" style="endArrow=classic;startArrow=classic;startFill=1;html=1;rounded=0;labelBackgroundColor=#ffffff;" value="⑩ invoke_model">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- Worker → S3 Media (get original / put cartoon) -->
-        <mxCell id="e-worker-s3media" edge="1" parent="1" source="worker" target="s3-media" style="endArrow=classic;startArrow=classic;startFill=1;html=1;rounded=0;labelBackgroundColor=#ffffff;" value="⑪ get original / put cartoon">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- Worker → DynamoDB (status update) -->
-        <mxCell id="e-worker-ddb" edge="1" parent="1" source="worker" target="dynamodb" style="endArrow=classic;html=1;rounded=0;labelBackgroundColor=#ffffff;" value="⑫ update status">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- ECR → Worker Lambda (image source) -->
-        <mxCell id="e-ecr-worker" edge="1" parent="1" source="ecr" target="worker" style="endArrow=classic;html=1;rounded=0;dashed=1;labelBackgroundColor=#ffffff;" value="image">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
       </root>
     </mxGraphModel>
   </diagram>
