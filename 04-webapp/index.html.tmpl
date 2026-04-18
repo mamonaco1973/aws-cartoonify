@@ -57,7 +57,7 @@
     button.secondary { background: #475569; }
     button.delete { background: #dc2626; }
 
-    input, select {
+    input, select, textarea {
       box-sizing: border-box;
       width: 100%;
       padding: 8px;
@@ -84,11 +84,11 @@
       border: 1px dashed #334155;
       border-radius: 6px;
     }
-    .current-job img { max-width: 100%; border-radius: 4px; display: block; margin-top: 8px; }
+    .current-job img { width: 120px; height: 120px; object-fit: cover; border-radius: 4px; display: block; margin-top: 8px; }
 
     .gallery {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 12px;
     }
 
