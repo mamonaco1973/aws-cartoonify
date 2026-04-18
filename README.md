@@ -70,6 +70,8 @@ learning, prototyping, or extending into more advanced AI-integrated pipelines.
 
 ## Architecture
 
+![diagram](aws-cartoonify.png)
+
 ```
 Browser → S3 (SPA, public) → Cognito Hosted UI → callback.html (PKCE) → sessionStorage (JWT)
 
