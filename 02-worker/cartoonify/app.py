@@ -46,25 +46,37 @@ BEDROCK_MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 
 TARGET_SIZE      = 1024   # square output
 CONTROL_STRENGTH = 0.7    # 0.0-1.0; higher = stick closer to input composition
-NEGATIVE_PROMPT  = (
-    "photorealistic, realistic photograph, blurry, low quality, "
-    "distorted, deformed, extra limbs, watermark, text, signature, "
-    "elderly, old, aged, wrinkles, deep wrinkles, gray hair, "
-    "middle-aged, older person"
-)
 
 # ------------------------------------------------------------------------------
 # Style prompts. Keys are sent by the client; full prompt text stays server-side
 # so the UI can evolve independently from the prompt engineering.
 # ------------------------------------------------------------------------------
 STYLE_PROMPTS = {
-    "studio_ghibli": "in the style of Studio Ghibli, soft watercolor anime, hand-drawn, whimsical",
-    "pixar_3d":      "Pixar-style 3D animated character, cinematic lighting, expressive features",
-    "simpsons":      "The Simpsons cartoon style, yellow skin, bold black outlines, flat colors",
-    "comic_book":    "vintage comic book style, halftone dots, bold ink lines, saturated colors",
-    "anime":         "anime illustration, cel-shaded, vibrant colors, sharp lineart",
-    "watercolor":    "soft watercolor painting, pastel tones, flowing brush strokes",
-    "pencil_sketch": "detailed pencil sketch, graphite shading, paper texture, monochrome",
+    "pixar_3d":      (
+        "Pixar 3D animated portrait, subsurface skin shading, warm rim lighting, "
+        "large expressive eyes, smooth stylized features, vibrant color grading, "
+        "cinematic depth of field, high-quality render"
+    ),
+    "simpsons":      (
+        "The Simpsons animated style, bright yellow skin, bold black outlines, "
+        "flat cel-shaded colors, D-shaped ears, overbite, Springfield cartoon aesthetic"
+    ),
+    "comic_book":    (
+        "Marvel comic book illustration, Ben-Day dot shading, bold ink outlines, "
+        "dramatic shadows, saturated primary colors, dynamic superhero rendering"
+    ),
+    "anime":         (
+        "Japanese anime portrait, detailed cel-shading, vibrant hair, large luminous eyes, "
+        "clean sharp lineart, soft highlight gloss, manga-style rendering"
+    ),
+    "watercolor":    (
+        "fine art watercolor portrait, loose wet-on-wet washes, soft color blooms, "
+        "visible paper texture, delicate brushwork, impressionist light"
+    ),
+    "pencil_sketch": (
+        "detailed graphite portrait sketch, cross-hatching, tonal shading, "
+        "textured paper grain, charcoal smudge, monochrome rendering, artist sketchbook"
+    ),
 }
 
 # ------------------------------------------------------------------------------
@@ -105,8 +117,8 @@ def prepare_image(src_bytes: bytes) -> str:
 # Bedrock invocation — Stability stable-image-control-structure-v1:0
 # ------------------------------------------------------------------------------
 # Request shape:
-#   { "image": "<b64>", "prompt": "...", "negative_prompt": "...",
-#     "control_strength": 0.0-1.0, "output_format": "png", "seed": 0 }
+#   { "image": "<b64>", "prompt": "...",
+#     "control_strength": 0.0-1.0, "output_format": "png" }
 # Response shape:
 #   { "seeds": [...], "finish_reasons": ["SUCCESS"|"CONTENT_FILTERED"|...],
 #     "images": ["<b64 png>"] }
@@ -123,7 +135,6 @@ def invoke_bedrock(source_b64: str, style_id: str, prompt_extra: str = "") -> by
     payload = {
         "image":            source_b64,
         "prompt":           prompt,
-        "negative_prompt":  NEGATIVE_PROMPT,
         "control_strength": CONTROL_STRENGTH,
         "output_format":    "png",
     }

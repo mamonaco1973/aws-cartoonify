@@ -13,7 +13,6 @@ from decimal import Decimal
 # IDs, full prompt text lives in the worker)
 # ------------------------------------------------------------------------------
 ALLOWED_STYLES = {
-    "studio_ghibli",
     "pixar_3d",
     "simpsons",
     "anime",
