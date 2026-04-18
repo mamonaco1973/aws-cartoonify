@@ -88,7 +88,7 @@
 
     .gallery {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
       gap: 12px;
     }
 
@@ -98,12 +98,32 @@
       overflow: hidden;
       background: #0b1220;
     }
-    .tile img {
+    .tile-images {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: #1e293b;
+    }
+    .tile-image-wrap {
+      position: relative;
+      background: #020617;
+    }
+    .tile-image-wrap img {
       width: 100%;
       aspect-ratio: 1 / 1;
       object-fit: cover;
       display: block;
-      background: #020617;
+    }
+    .tile-image-wrap .img-label {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      background: rgba(0, 0, 0, 0.62);
+      color: #e5e7eb;
+      font-size: 10px;
+      letter-spacing: 0.4px;
+      padding: 2px 6px;
+      border-radius: 3px;
     }
     .tile .meta {
       padding: 8px 10px;
@@ -314,9 +334,53 @@ function startLogout() {
 }
 
 // =========================================================================
+// Proactive token refresh
+// =========================================================================
+
+// Exchange the stored refresh_token for a new access_token. Cognito does not
+// rotate the refresh_token itself, so only access_token / id_token are updated.
+// On failure (refresh_token expired or revoked) the session is cleared and the
+// user is sent through the logout flow to re-authenticate.
+async function refreshTokens() {
+  const refreshToken = sessionStorage.getItem("refresh_token");
+  if (!refreshToken || !AUTH) { startLogout(); return; }
+
+  const body = new URLSearchParams();
+  body.set("grant_type",    "refresh_token");
+  body.set("client_id",     AUTH.clientId);
+  body.set("refresh_token", refreshToken);
+
+  const res = await fetch("https://" + AUTH.cognitoDomain + "/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  if (!res.ok) { startLogout(); return; }
+
+  const tok = await res.json();
+  sessionStorage.setItem("access_token",      tok.access_token);
+  if (tok.id_token)   sessionStorage.setItem("id_token",   tok.id_token);
+  if (tok.expires_in) sessionStorage.setItem("expires_in", String(tok.expires_in));
+  sessionStorage.setItem("token_received_at", String(Date.now()));
+}
+
+// Refresh proactively if within 60 s of expiry so that in-flight API calls
+// always carry a valid token. Falls back to 3600 s if expires_in is absent.
+async function maybeRefresh() {
+  const receivedAt = parseInt(sessionStorage.getItem("token_received_at") || "0", 10);
+  const expiresIn  = parseInt(sessionStorage.getItem("expires_in") || "3600", 10);
+  const expiresAt  = receivedAt + expiresIn * 1000;
+  if (Date.now() >= expiresAt - 60_000) {
+    await refreshTokens();
+  }
+}
+
+// =========================================================================
 // API helpers
 // =========================================================================
 async function api(path, method = "GET", body) {
+  await maybeRefresh();
   const headers = { "Content-Type": "application/json" };
   const token = sessionStorage.getItem("access_token");
   if (token) headers["Authorization"] = "Bearer " + token;
@@ -489,6 +553,22 @@ function scheduleGalleryRefresh(items) {
   }
 }
 
+const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'/>";
+
+function makeImageWrap(src, label) {
+  const wrap = document.createElement("div");
+  wrap.className = "tile-image-wrap";
+  const img = document.createElement("img");
+  img.alt = label;
+  img.src = src || BLANK_IMG;
+  const lbl = document.createElement("div");
+  lbl.className = "img-label";
+  lbl.textContent = label;
+  wrap.appendChild(img);
+  wrap.appendChild(lbl);
+  return wrap;
+}
+
 function renderGallery(items) {
   const g = document.getElementById("gallery");
   g.innerHTML = "";
@@ -496,10 +576,11 @@ function renderGallery(items) {
     const tile = document.createElement("div");
     tile.className = "tile";
 
-    const img = document.createElement("img");
-    img.alt = it.style || "";
-    img.src = it.cartoon_url || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'/>";
-    tile.appendChild(img);
+    const images = document.createElement("div");
+    images.className = "tile-images";
+    images.appendChild(makeImageWrap(it.original_url, "Original"));
+    images.appendChild(makeImageWrap(it.cartoon_url,  "Cartoon"));
+    tile.appendChild(images);
 
     const meta = document.createElement("div");
     meta.className = "meta";
