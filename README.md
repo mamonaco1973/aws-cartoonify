@@ -70,68 +70,11 @@ learning, prototyping, or extending into more advanced AI-integrated pipelines.
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    Browser([Browser])
-
-    subgraph auth["Auth"]
-        SPA["S3 · SPA (public)"]
-        CognitoUI["Cognito Hosted UI"]
-        CB["callback.html (PKCE)"]
-    end
-
-    subgraph apigw["API Gateway — JWT Authorized"]
-        UL["upload_url λ"]
-        SL["submit λ"]
-        RL["result λ"]
-        HL["history λ"]
-        DL["delete λ"]
-    end
-
-    subgraph storage["Storage"]
-        S3M[("S3 media (private)")]
-        DDB[("DynamoDB")]
-        SQS[/"SQS Queue"/]
-    end
-
-    subgraph worker_layer["Worker"]
-        WL["Worker Lambda (ECR container)"]
-        Bedrock["Bedrock · Stability AI"]
-    end
-
-    Browser -- "visit / sign in" --> SPA
-    SPA --> CognitoUI
-    CognitoUI -- "auth code" --> CB
-    CB -- "JWT → sessionStorage" --> Browser
-
-    Browser -- "POST /upload-url" --> UL
-    UL -- "presigned S3 POST" --> Browser
-    Browser -- "PUT direct" --> S3M
-
-    Browser -- "POST /generate" --> SL
-    SL -- "status=submitted" --> DDB
-    SL --> SQS
-    SQS -- "trigger batch=1" --> WL
-    WL -- "download original" --> S3M
-    WL --> Bedrock
-    Bedrock -- "cartoon PNG" --> WL
-    WL -- "upload cartoon" --> S3M
-    WL -- "status=complete" --> DDB
-
-    Browser -- "GET /result/{id}" --> RL
-    RL -- "status + presigned URLs" --> Browser
-
-    Browser -- "GET /history" --> HL
-    HL -- "last 50 jobs" --> Browser
-
-    Browser -- "DELETE /history/{id}" --> DL
-    DL --> S3M & DDB
-```
+![diagram](aws-cartoonify.png)
 
 ## Workflow
 
 ![diagram](cartoonify-flow.png)
-
 
 ## Prerequisites
 
