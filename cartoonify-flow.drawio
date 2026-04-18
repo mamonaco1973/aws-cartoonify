@@ -1,394 +1,129 @@
-<mxfile host="app.diagrams.net" modified="2026-04-18" agent="Claude" version="24.7.5">
+<mxfile host="app.diagrams.net" agent="Claude">
   <diagram id="cartoonify-flow" name="How to Cartoonify an Image">
-    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="950" pageHeight="1800" math="0" shadow="1">
+    <mxGraphModel grid="1" page="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="950" pageHeight="1800" math="0" shadow="1">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-
-        <!-- ================================================================ -->
-        <!-- Title                                                             -->
-        <!-- ================================================================ -->
-        <mxCell id="title" value="How to Cartoonify an Image"
-          style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;
-                 whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1a1a2e;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="20" width="750" height="44" as="geometry" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1a1a2e;" value="Cartoonify Workflow" vertex="1">
+          <mxGeometry height="44" width="750" x="75" y="20" as="geometry" />
         </mxCell>
-
-        <!-- ================================================================ -->
-        <!-- Step 1: Sign In                                                   -->
-        <!-- ================================================================ -->
-        <mxCell id="s1" value=""
-          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=4;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="82" width="750" height="130" as="geometry" />
+        <mxCell id="s1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=4;" value="" vertex="1">
+          <mxGeometry height="130" width="750" x="75" y="82" as="geometry" />
         </mxCell>
-        <mxCell id="s1n" value="①"
-          style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;
-                 fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;"
-          vertex="1" parent="1">
-          <mxGeometry x="90" y="97" width="56" height="56" as="geometry" />
+        <mxCell id="s1n" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;" value="①" vertex="1">
+          <mxGeometry height="56" width="56" x="90" y="97" as="geometry" />
         </mxCell>
-        <mxCell id="s1t" value="&lt;b&gt;Sign In with Cognito&lt;/b&gt;&lt;br&gt;
-Open the app in the browser (S3 static URL) and click &lt;b&gt;Sign In&lt;/b&gt;. The browser redirects to the &lt;b&gt;Cognito Hosted UI&lt;/b&gt;.
-Enter your email and password — or sign up for a new account. Cognito validates credentials and redirects
-to &lt;b&gt;callback.html&lt;/b&gt; with an authorization code. The PKCE exchange returns access, ID, and refresh
-tokens that are stored in &lt;b&gt;sessionStorage&lt;/b&gt;. The UI unlocks and the history gallery loads."
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;
-                 whiteSpace=wrap;rounded=0;fontSize=12;"
-          vertex="1" parent="1">
-          <mxGeometry x="158" y="92" width="657" height="115" as="geometry" />
+        <mxCell id="s1t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" value="&lt;b&gt;Sign In with Cognito&lt;/b&gt;&lt;br&gt;Open the app in the browser (S3 static URL) and click &lt;b&gt;Sign In&lt;/b&gt;. The browser redirects to the &lt;b&gt;Cognito Hosted UI&lt;/b&gt;.&lt;br&gt;Enter your email and password — or sign up for a new account. Cognito validates credentials and redirects&lt;br&gt;to &lt;b&gt;callback.html&lt;/b&gt; with an authorization code. The PKCE exchange returns access, ID, and refresh&lt;br&gt;tokens stored in &lt;b&gt;sessionStorage&lt;/b&gt;. The UI unlocks and the history gallery loads." vertex="1">
+          <mxGeometry height="115" width="657" x="158" y="92" as="geometry" />
         </mxCell>
-
-        <!-- Arrow 1 → 2 -->
-        <mxCell id="a12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;
-                 jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;
-                 entryX=0.5;entryY=0;entryDx=0;entryDy=0;"
-          edge="1" parent="1" source="s1" target="s2">
+        <mxCell id="a12" edge="1" parent="1" source="s1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="s2">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- ================================================================ -->
-        <!-- Step 2: Select & Validate Image                                   -->
-        <!-- ================================================================ -->
-        <mxCell id="s2" value=""
-          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=4;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="242" width="750" height="120" as="geometry" />
+        <mxCell id="s2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=4;" value="" vertex="1">
+          <mxGeometry height="120" width="750" x="75" y="242" as="geometry" />
         </mxCell>
-        <mxCell id="s2n" value="②"
-          style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;
-                 fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;"
-          vertex="1" parent="1">
-          <mxGeometry x="90" y="257" width="56" height="56" as="geometry" />
+        <mxCell id="s2n" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;" value="②" vertex="1">
+          <mxGeometry height="56" width="56" x="90" y="257" as="geometry" />
         </mxCell>
-        <mxCell id="s2t" value="&lt;b&gt;Select &amp;amp; Validate Image&lt;/b&gt;&lt;br&gt;
-Use the file picker to select a photo. The browser validates immediately — no server round-trip:
-file type must be &lt;b&gt;JPEG, PNG, or WebP&lt;/b&gt;; file size must be &lt;b&gt;≤ 5 MB&lt;/b&gt;;
-image dimensions must be &lt;b&gt;≤ 2048 × 2048 px&lt;/b&gt;. Any violation surfaces an error in the UI.
-The &lt;b&gt;Cartoonify&lt;/b&gt; button stays disabled until a valid file is selected."
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;
-                 whiteSpace=wrap;rounded=0;fontSize=12;"
-          vertex="1" parent="1">
-          <mxGeometry x="158" y="250" width="657" height="105" as="geometry" />
+        <mxCell id="s2t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" value="&lt;b&gt;Select &amp;amp; Validate Image&lt;/b&gt;&lt;br&gt;Use the file picker to select a photo. The browser validates immediately — no server round-trip required.&lt;br&gt;File type must be &lt;b&gt;JPEG, PNG, or WebP&lt;/b&gt;; file size must be &lt;b&gt;5 MB or less&lt;/b&gt;;&lt;br&gt;image dimensions must be &lt;b&gt;2048 x 2048 px or smaller&lt;/b&gt;. The &lt;b&gt;Cartoonify&lt;/b&gt; button stays disabled until a valid file is chosen." vertex="1">
+          <mxGeometry height="105" width="657" x="158" y="250" as="geometry" />
         </mxCell>
-
-        <!-- Arrow 2 → 3 -->
-        <mxCell id="a23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;"
-          edge="1" parent="1" source="s2" target="s3">
+        <mxCell id="a23" edge="1" parent="1" source="s2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="s3">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- ================================================================ -->
-        <!-- Step 3: Get Presigned Upload URL                                  -->
-        <!-- ================================================================ -->
-        <mxCell id="s3" value=""
-          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=4;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="392" width="750" height="135" as="geometry" />
+        <mxCell id="s3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=4;" value="" vertex="1">
+          <mxGeometry height="135" width="750" x="75" y="392" as="geometry" />
         </mxCell>
-        <mxCell id="s3n" value="③"
-          style="ellipse;whiteSpace=wrap;html=1;fillColor=#d6b656;strokeColor=#d6b656;
-                 fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;"
-          vertex="1" parent="1">
-          <mxGeometry x="90" y="408" width="56" height="56" as="geometry" />
+        <mxCell id="s3n" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d6b656;strokeColor=#d6b656;fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;" value="③" vertex="1">
+          <mxGeometry height="56" width="56" x="90" y="408" as="geometry" />
         </mxCell>
-        <mxCell id="s3t" value="&lt;b&gt;Request a Presigned Upload URL&lt;/b&gt;&lt;br&gt;
-&lt;b&gt;POST /upload-url&lt;/b&gt; with &lt;tt&gt;Authorization: Bearer &amp;lt;JWT&amp;gt;&lt;/tt&gt; and &lt;tt&gt;{ content_type }&lt;/tt&gt;. &lt;b&gt;API Gateway&lt;/b&gt; validates the JWT
-signature against &lt;b&gt;Cognito JWKS&lt;/b&gt; before invoking any Lambda — unauthenticated requests are rejected at the edge.
-The &lt;b&gt;upload_url Lambda&lt;/b&gt; generates a time-sortable &lt;b&gt;job_id&lt;/b&gt; (&lt;tt&gt;{epoch_ms}-{hex8}&lt;/tt&gt;) and calls
-S3 &lt;tt&gt;generate_presigned_post&lt;/tt&gt; — returning a signed URL + form fields valid for &lt;b&gt;300 seconds&lt;/b&gt;.
-S3 will enforce an exact content-type match and a &lt;b&gt;0–5 MB&lt;/b&gt; size constraint on upload."
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;
-                 whiteSpace=wrap;rounded=0;fontSize=12;"
-          vertex="1" parent="1">
-          <mxGeometry x="158" y="400" width="657" height="120" as="geometry" />
+        <mxCell id="s3t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" value="&lt;b&gt;Request a Presigned Upload URL&lt;/b&gt;&lt;br&gt;&lt;b&gt;POST /upload-url&lt;/b&gt; with &lt;tt&gt;Authorization: Bearer &amp;lt;JWT&amp;gt;&lt;/tt&gt; and &lt;tt&gt;{ content_type }&lt;/tt&gt;. &lt;b&gt;API Gateway&lt;/b&gt; validates the JWT&lt;br&gt;signature against &lt;b&gt;Cognito JWKS&lt;/b&gt; before invoking any Lambda — unauthenticated requests are rejected at the edge.&lt;br&gt;The &lt;b&gt;upload_url Lambda&lt;/b&gt; generates a time-sortable &lt;b&gt;job_id&lt;/b&gt; and calls S3 &lt;tt&gt;generate_presigned_post&lt;/tt&gt;,&lt;br&gt;returning a signed URL plus form fields valid for &lt;b&gt;300 seconds&lt;/b&gt;. S3 enforces a 0-5 MB size constraint on upload." vertex="1">
+          <mxGeometry height="120" width="657" x="158" y="400" as="geometry" />
         </mxCell>
-
-        <!-- Arrow 3 → 4 -->
-        <mxCell id="a34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;"
-          edge="1" parent="1" source="s3" target="s4">
+        <mxCell id="a34" edge="1" parent="1" source="s3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="s4">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- ================================================================ -->
-        <!-- Step 4: Upload Directly to S3                                    -->
-        <!-- ================================================================ -->
-        <mxCell id="s4" value=""
-          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;arcSize=4;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="557" width="750" height="115" as="geometry" />
+        <mxCell id="s4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;arcSize=4;" value="" vertex="1">
+          <mxGeometry height="115" width="750" x="75" y="557" as="geometry" />
         </mxCell>
-        <mxCell id="s4n" value="④"
-          style="ellipse;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#82b366;
-                 fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;"
-          vertex="1" parent="1">
-          <mxGeometry x="90" y="572" width="56" height="56" as="geometry" />
+        <mxCell id="s4n" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#82b366;fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;" value="④" vertex="1">
+          <mxGeometry height="56" width="56" x="90" y="572" as="geometry" />
         </mxCell>
-        <mxCell id="s4t" value="&lt;b&gt;Upload Image Directly to S3&lt;/b&gt;&lt;br&gt;
-The browser assembles a &lt;tt&gt;multipart/form-data&lt;/tt&gt; body from the presigned form fields plus the image file,
-then POSTs it &lt;b&gt;directly to S3&lt;/b&gt; — bypassing Lambda and API Gateway entirely. Image data never touches the
-Lambda network path. S3 stores the file at &lt;b&gt;originals/&amp;lt;owner&amp;gt;/&amp;lt;job_id&amp;gt;.&amp;lt;ext&amp;gt;&lt;/b&gt;
-in the private media bucket, enforcing the content-type and size constraints server-side."
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;
-                 whiteSpace=wrap;rounded=0;fontSize=12;"
-          vertex="1" parent="1">
-          <mxGeometry x="158" y="565" width="657" height="100" as="geometry" />
+        <mxCell id="s4t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" value="&lt;b&gt;Upload Image Directly to S3&lt;/b&gt;&lt;br&gt;The browser assembles a multipart form body from the presigned fields plus the image file,&lt;br&gt;then POSTs it &lt;b&gt;directly to S3&lt;/b&gt; — bypassing Lambda and API Gateway entirely. Image data never touches the Lambda network path.&lt;br&gt;S3 stores the file at &lt;b&gt;originals/&amp;lt;owner&amp;gt;/&amp;lt;job_id&amp;gt;.&amp;lt;ext&amp;gt;&lt;/b&gt; in the private media bucket, enforcing content-type and size server-side." vertex="1">
+          <mxGeometry height="100" width="657" x="158" y="565" as="geometry" />
         </mxCell>
-
-        <!-- Arrow 4 → 5 -->
-        <mxCell id="a45" style="edgeStyle=orthogonalEdgeStyle;rounded=0;"
-          edge="1" parent="1" source="s4" target="s5">
+        <mxCell id="a45" edge="1" parent="1" source="s4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="s5">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- ================================================================ -->
-        <!-- Step 5: Select Style & Submit Job                                -->
-        <!-- ================================================================ -->
-        <mxCell id="s5" value=""
-          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=4;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="702" width="750" height="155" as="geometry" />
+        <mxCell id="s5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=4;" value="" vertex="1">
+          <mxGeometry height="155" width="750" x="75" y="702" as="geometry" />
         </mxCell>
-        <mxCell id="s5n" value="⑤"
-          style="ellipse;whiteSpace=wrap;html=1;fillColor=#d6b656;strokeColor=#d6b656;
-                 fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;"
-          vertex="1" parent="1">
-          <mxGeometry x="90" y="718" width="56" height="56" as="geometry" />
+        <mxCell id="s5n" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d6b656;strokeColor=#d6b656;fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;" value="⑤" vertex="1">
+          <mxGeometry height="56" width="56" x="90" y="718" as="geometry" />
         </mxCell>
-        <mxCell id="s5t" value="&lt;b&gt;Select Style &amp;amp; Submit the Cartoon Job&lt;/b&gt;&lt;br&gt;
-Pick a style: &lt;b&gt;Pixar 3D · Simpsons · Anime · Comic Book · Watercolor · Pencil Sketch&lt;/b&gt;.
-Optionally type extra instructions (≤ 500 chars, e.g. &lt;i&gt;wearing a red hat, smiling&lt;/i&gt;). Click &lt;b&gt;Cartoonify&lt;/b&gt;.
-&lt;b&gt;POST /generate&lt;/b&gt; sends &lt;tt&gt;{ job_id, key, style, prompt_extra }&lt;/tt&gt;. The &lt;b&gt;submit Lambda&lt;/b&gt; validates
-the style, calls S3 &lt;tt&gt;head_object&lt;/tt&gt; to confirm the upload exists, queries DynamoDB to enforce the
-&lt;b&gt;daily quota&lt;/b&gt; (max 10 cartoons per UTC day — no GSI needed, just a range query on the time-sortable sort key),
-writes a job row with &lt;tt&gt;status=submitted&lt;/tt&gt;, then sends a message to &lt;b&gt;SQS&lt;/b&gt;. Returns &lt;b&gt;202 Accepted&lt;/b&gt;."
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;
-                 whiteSpace=wrap;rounded=0;fontSize=12;"
-          vertex="1" parent="1">
-          <mxGeometry x="158" y="710" width="657" height="140" as="geometry" />
+        <mxCell id="s5t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" value="&lt;b&gt;Select Style &amp;amp; Submit the Cartoon Job&lt;/b&gt;&lt;br&gt;Pick a style: &lt;b&gt;Pixar 3D · Simpsons · Anime · Comic Book · Watercolor · Pencil Sketch&lt;/b&gt;.&lt;br&gt;Optionally type extra instructions (500 chars max). Click &lt;b&gt;Cartoonify&lt;/b&gt;.&lt;br&gt;&lt;b&gt;POST /generate&lt;/b&gt; sends &lt;tt&gt;{ job_id, key, style, prompt_extra }&lt;/tt&gt;. The &lt;b&gt;submit Lambda&lt;/b&gt; validates&lt;br&gt;the style, calls S3 head_object to confirm the upload exists, queries DynamoDB to enforce the&lt;br&gt;&lt;b&gt;daily quota&lt;/b&gt; (max 10 cartoons per UTC day), writes &lt;tt&gt;status=submitted&lt;/tt&gt;, then enqueues on &lt;b&gt;SQS&lt;/b&gt;. Returns &lt;b&gt;202 Accepted&lt;/b&gt;." vertex="1">
+          <mxGeometry height="140" width="657" x="158" y="710" as="geometry" />
         </mxCell>
-
-        <!-- Arrow 5 → 6 -->
-        <mxCell id="a56" style="edgeStyle=orthogonalEdgeStyle;rounded=0;"
-          edge="1" parent="1" source="s5" target="s6">
+        <mxCell id="a56" edge="1" parent="1" source="s5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="s6">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- ================================================================ -->
-        <!-- Step 6: SQS Triggers Worker Lambda                               -->
-        <!-- ================================================================ -->
-        <mxCell id="s6" value=""
-          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;arcSize=4;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="887" width="750" height="140" as="geometry" />
+        <mxCell id="s6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;arcSize=4;" value="" vertex="1">
+          <mxGeometry height="140" width="750" x="75" y="887" as="geometry" />
         </mxCell>
-        <mxCell id="s6n" value="⑥"
-          style="ellipse;whiteSpace=wrap;html=1;fillColor=#d79b00;strokeColor=#d79b00;
-                 fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;"
-          vertex="1" parent="1">
-          <mxGeometry x="90" y="903" width="56" height="56" as="geometry" />
+        <mxCell id="s6n" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d79b00;strokeColor=#d79b00;fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;" value="⑥" vertex="1">
+          <mxGeometry height="56" width="56" x="90" y="903" as="geometry" />
         </mxCell>
-        <mxCell id="s6t" value="&lt;b&gt;SQS Triggers the Worker Lambda&lt;/b&gt;&lt;br&gt;
-SQS delivers the job message to the &lt;b&gt;cartoonify-worker Lambda&lt;/b&gt; — a container image (Python 3.11 + Pillow)
-with &lt;b&gt;2048 MB&lt;/b&gt; memory and a &lt;b&gt;120 s&lt;/b&gt; timeout. The SQS visibility timeout is 180 s, ensuring the
-message stays hidden while the worker runs. Batch size is &lt;b&gt;1&lt;/b&gt; — one Bedrock call per invocation.
-The worker immediately marks &lt;tt&gt;status=processing&lt;/tt&gt; in DynamoDB, downloads the original from S3, then
-runs &lt;b&gt;Pillow&lt;/b&gt; normalization: EXIF rotation strip → RGB conversion → center-square crop →
-resize to &lt;b&gt;1024 × 1024 px&lt;/b&gt; → encode as PNG (base64) for Bedrock."
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;
-                 whiteSpace=wrap;rounded=0;fontSize=12;"
-          vertex="1" parent="1">
-          <mxGeometry x="158" y="895" width="657" height="125" as="geometry" />
+        <mxCell id="s6t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" value="&lt;b&gt;SQS Triggers the Worker Lambda&lt;/b&gt;&lt;br&gt;SQS delivers the job message to the &lt;b&gt;cartoonify-worker Lambda&lt;/b&gt; — a container image (Python 3.11 + Pillow)&lt;br&gt;with &lt;b&gt;2048 MB&lt;/b&gt; memory and a &lt;b&gt;120 s&lt;/b&gt; timeout. The SQS visibility timeout is 180 s, ensuring the&lt;br&gt;message stays hidden while the worker runs. Batch size is &lt;b&gt;1&lt;/b&gt; — one Bedrock call per invocation.&lt;br&gt;The worker marks &lt;tt&gt;status=processing&lt;/tt&gt; in DynamoDB, downloads the original from S3, then runs &lt;b&gt;Pillow&lt;/b&gt;:&lt;br&gt;EXIF strip → RGB convert → center-square crop → resize to &lt;b&gt;1024 x 1024 px&lt;/b&gt; → encode as PNG for Bedrock." vertex="1">
+          <mxGeometry height="125" width="657" x="158" y="895" as="geometry" />
         </mxCell>
-
-        <!-- Arrow 6 → 7 -->
-        <mxCell id="a67" style="edgeStyle=orthogonalEdgeStyle;rounded=0;"
-          edge="1" parent="1" source="s6" target="s7">
+        <mxCell id="a67" edge="1" parent="1" source="s6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="s7">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- ================================================================ -->
-        <!-- Step 7: Bedrock AI Generation                                    -->
-        <!-- ================================================================ -->
-        <mxCell id="s7" value=""
-          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;arcSize=4;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="1057" width="750" height="150" as="geometry" />
+        <mxCell id="s7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;arcSize=4;" value="" vertex="1">
+          <mxGeometry height="150" width="750" x="75" y="1057" as="geometry" />
         </mxCell>
-        <mxCell id="s7n" value="⑦"
-          style="ellipse;whiteSpace=wrap;html=1;fillColor=#9673a6;strokeColor=#9673a6;
-                 fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;"
-          vertex="1" parent="1">
-          <mxGeometry x="90" y="1073" width="56" height="56" as="geometry" />
+        <mxCell id="s7n" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#9673a6;strokeColor=#9673a6;fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;" value="⑦" vertex="1">
+          <mxGeometry height="56" width="56" x="90" y="1073" as="geometry" />
         </mxCell>
-        <mxCell id="s7t" value="&lt;b&gt;Bedrock AI Generates the Cartoon&lt;/b&gt;&lt;br&gt;
-The worker calls &lt;b&gt;bedrock:InvokeModel&lt;/b&gt; using Stability &lt;tt&gt;stable-image-control-structure-v1:0&lt;/tt&gt;
-via the &lt;tt&gt;us.*&lt;/tt&gt; cross-region inference profile (routes across us-east-1, us-east-2, us-west-2).
-The request includes: the &lt;b&gt;normalized image&lt;/b&gt; (base64 PNG), a &lt;b&gt;style prompt&lt;/b&gt; (e.g.
-&lt;i&gt;"Pixar 3D animated portrait, subsurface skin shading, warm rim lighting, large expressive eyes…"&lt;/i&gt;
-plus any user-supplied extra instructions), and &lt;tt&gt;control_strength=0.7&lt;/tt&gt; — which tells the model
-how closely to follow the original composition and pose while regenerating in the requested style.
-The model returns a generated cartoon as a &lt;b&gt;base64-encoded PNG&lt;/b&gt;."
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;
-                 whiteSpace=wrap;rounded=0;fontSize=12;"
-          vertex="1" parent="1">
-          <mxGeometry x="158" y="1065" width="657" height="135" as="geometry" />
+        <mxCell id="s7t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" value="&lt;b&gt;Bedrock AI Generates the Cartoon&lt;/b&gt;&lt;br&gt;The worker calls &lt;b&gt;bedrock:InvokeModel&lt;/b&gt; using Stability &lt;tt&gt;stable-image-control-structure-v1:0&lt;/tt&gt;&lt;br&gt;via the &lt;tt&gt;us.*&lt;/tt&gt; cross-region inference profile (routes across us-east-1, us-east-2, us-west-2).&lt;br&gt;The request includes the &lt;b&gt;normalized image&lt;/b&gt; (base64 PNG), a &lt;b&gt;style prompt&lt;/b&gt; — e.g. &lt;i&gt;Pixar 3D animated portrait,&lt;br&gt;subsurface skin shading, warm rim lighting, large expressive eyes&lt;/i&gt; — plus any extra user instructions,&lt;br&gt;and &lt;tt&gt;control_strength=0.7&lt;/tt&gt; which preserves the subject&amp;apos;s pose and composition.&lt;br&gt;The model returns the generated cartoon as a &lt;b&gt;base64-encoded PNG&lt;/b&gt;." vertex="1">
+          <mxGeometry height="135" width="657" x="158" y="1065" as="geometry" />
         </mxCell>
-
-        <!-- Arrow 7 → 8 -->
-        <mxCell id="a78" style="edgeStyle=orthogonalEdgeStyle;rounded=0;"
-          edge="1" parent="1" source="s7" target="s8">
+        <mxCell id="a78" edge="1" parent="1" source="s7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="s8">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- ================================================================ -->
-        <!-- Step 8: Store Cartoon & Update Status                            -->
-        <!-- ================================================================ -->
-        <mxCell id="s8" value=""
-          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;arcSize=4;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="1237" width="750" height="120" as="geometry" />
+        <mxCell id="s8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;arcSize=4;" value="" vertex="1">
+          <mxGeometry height="120" width="750" x="75" y="1237" as="geometry" />
         </mxCell>
-        <mxCell id="s8n" value="⑧"
-          style="ellipse;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#82b366;
-                 fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;"
-          vertex="1" parent="1">
-          <mxGeometry x="90" y="1253" width="56" height="56" as="geometry" />
+        <mxCell id="s8n" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#82b366;fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;" value="⑧" vertex="1">
+          <mxGeometry height="56" width="56" x="90" y="1253" as="geometry" />
         </mxCell>
-        <mxCell id="s8t" value="&lt;b&gt;Store Cartoon &amp;amp; Update Job Status&lt;/b&gt;&lt;br&gt;
-The worker uploads the generated cartoon PNG to S3 at &lt;b&gt;cartoons/&amp;lt;owner&amp;gt;/&amp;lt;job_id&amp;gt;.png&lt;/b&gt;
-in the private media bucket, then updates the DynamoDB job row:
-&lt;tt&gt;status=complete&lt;/tt&gt;, &lt;tt&gt;cartoon_key&lt;/tt&gt;, and &lt;tt&gt;completed_at&lt;/tt&gt;.
-Both the original upload and the cartoon are subject to a &lt;b&gt;7-day S3 lifecycle rule&lt;/b&gt; (auto-delete)
-and a matching &lt;b&gt;DynamoDB TTL&lt;/b&gt;. On any exception, the worker marks &lt;tt&gt;status=error&lt;/tt&gt; with the
-first 500 chars of the message and swallows the exception — SQS does not redrive."
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;
-                 whiteSpace=wrap;rounded=0;fontSize=12;"
-          vertex="1" parent="1">
-          <mxGeometry x="158" y="1245" width="657" height="105" as="geometry" />
+        <mxCell id="s8t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" value="&lt;b&gt;Store Cartoon &amp;amp; Update Job Status&lt;/b&gt;&lt;br&gt;The worker uploads the generated cartoon PNG to S3 at &lt;b&gt;cartoons/&amp;lt;owner&amp;gt;/&amp;lt;job_id&amp;gt;.png&lt;/b&gt; in the private media bucket,&lt;br&gt;then updates the DynamoDB job row: &lt;tt&gt;status=complete&lt;/tt&gt;, &lt;tt&gt;cartoon_key&lt;/tt&gt;, and &lt;tt&gt;completed_at&lt;/tt&gt;.&lt;br&gt;Both files are subject to a &lt;b&gt;7-day S3 lifecycle rule&lt;/b&gt; and matching &lt;b&gt;DynamoDB TTL&lt;/b&gt;.&lt;br&gt;On any exception the worker marks &lt;tt&gt;status=error&lt;/tt&gt; and swallows the exception — SQS does not redrive." vertex="1">
+          <mxGeometry height="105" width="657" x="158" y="1245" as="geometry" />
         </mxCell>
-
-        <!-- Arrow 8 → 9 -->
-        <mxCell id="a89" style="edgeStyle=orthogonalEdgeStyle;rounded=0;"
-          edge="1" parent="1" source="s8" target="s9">
+        <mxCell id="a89" edge="1" parent="1" source="s8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="s9">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- ================================================================ -->
-        <!-- Step 9: Poll & Display Result                                    -->
-        <!-- ================================================================ -->
-        <mxCell id="s9" value=""
-          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=4;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="1387" width="750" height="125" as="geometry" />
+        <mxCell id="s9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=4;" value="" vertex="1">
+          <mxGeometry height="125" width="750" x="75" y="1387" as="geometry" />
         </mxCell>
-        <mxCell id="s9n" value="⑨"
-          style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;
-                 fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;"
-          vertex="1" parent="1">
-          <mxGeometry x="90" y="1403" width="56" height="56" as="geometry" />
+        <mxCell id="s9n" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;" value="⑨" vertex="1">
+          <mxGeometry height="56" width="56" x="90" y="1403" as="geometry" />
         </mxCell>
-        <mxCell id="s9t" value="&lt;b&gt;Poll for Result &amp;amp; Display Cartoon&lt;/b&gt;&lt;br&gt;
-While the job runs, the browser calls &lt;b&gt;GET /result/{job_id}&lt;/b&gt; every &lt;b&gt;2 seconds&lt;/b&gt; (up to 90
-attempts, ~3 minutes). Each response includes the current &lt;tt&gt;status&lt;/tt&gt; field. When
-&lt;tt&gt;status=complete&lt;/tt&gt;, the API returns &lt;b&gt;presigned GET URLs&lt;/b&gt; (4-hour expiry) for both the
-original upload and the generated cartoon. The cartoon is rendered immediately in the current-job panel.
-The history gallery reloads and auto-refreshes every 10 s while any tile remains pending."
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;
-                 whiteSpace=wrap;rounded=0;fontSize=12;"
-          vertex="1" parent="1">
-          <mxGeometry x="158" y="1395" width="657" height="110" as="geometry" />
+        <mxCell id="s9t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" value="&lt;b&gt;Poll for Result &amp;amp; Display Cartoon&lt;/b&gt;&lt;br&gt;While the job runs, the browser calls &lt;b&gt;GET /result/{job_id}&lt;/b&gt; every &lt;b&gt;2 seconds&lt;/b&gt; (up to 90 attempts, ~3 minutes).&lt;br&gt;Each response includes the current &lt;tt&gt;status&lt;/tt&gt; field. When &lt;tt&gt;status=complete&lt;/tt&gt;, the API returns&lt;br&gt;&lt;b&gt;presigned GET URLs&lt;/b&gt; (4-hour expiry) for both the original upload and the generated cartoon.&lt;br&gt;The cartoon renders in the current-job panel. The history gallery reloads and auto-refreshes every 10 s while any tile is pending." vertex="1">
+          <mxGeometry height="110" width="657" x="158" y="1395" as="geometry" />
         </mxCell>
-
-        <!-- Arrow 9 → 10 -->
-        <mxCell id="a910" style="edgeStyle=orthogonalEdgeStyle;rounded=0;"
-          edge="1" parent="1" source="s9" target="s10">
+        <mxCell id="a910" edge="1" parent="1" source="s9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="s10">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- ================================================================ -->
-        <!-- Step 10: Gallery — Browse, Download, Delete                      -->
-        <!-- ================================================================ -->
-        <mxCell id="s10" value=""
-          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=4;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="1542" width="750" height="120" as="geometry" />
+        <mxCell id="s10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=4;" value="" vertex="1">
+          <mxGeometry height="120" width="750" x="75" y="1542" as="geometry" />
         </mxCell>
-        <mxCell id="s10n" value="⑩"
-          style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;
-                 fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;"
-          vertex="1" parent="1">
-          <mxGeometry x="90" y="1558" width="56" height="56" as="geometry" />
+        <mxCell id="s10n" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontSize=26;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;" value="⑩" vertex="1">
+          <mxGeometry height="56" width="56" x="90" y="1558" as="geometry" />
         </mxCell>
-        <mxCell id="s10t" value="&lt;b&gt;Browse History, Download &amp;amp; Delete&lt;/b&gt;&lt;br&gt;
-&lt;b&gt;GET /history&lt;/b&gt; returns the last &lt;b&gt;50 cartoons&lt;/b&gt; for the authenticated user, newest first,
-each with a presigned download URL valid for 4 hours. The gallery renders as a responsive tile grid.
-Click &lt;b&gt;Download&lt;/b&gt; on any tile to save the PNG. Click &lt;b&gt;Delete&lt;/b&gt; to call
-&lt;b&gt;DELETE /history/{job_id}&lt;/b&gt; — which removes the original upload, the cartoon PNG, and the DynamoDB
-row in one call. Items not manually deleted expire automatically after &lt;b&gt;7 days&lt;/b&gt; via S3 lifecycle
-and DynamoDB TTL."
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;
-                 whiteSpace=wrap;rounded=0;fontSize=12;"
-          vertex="1" parent="1">
-          <mxGeometry x="158" y="1550" width="657" height="105" as="geometry" />
+        <mxCell id="s10t" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" value="&lt;b&gt;Browse History, Download &amp;amp; Delete&lt;/b&gt;&lt;br&gt;&lt;b&gt;GET /history&lt;/b&gt; returns the last &lt;b&gt;50 cartoons&lt;/b&gt; for the authenticated user, newest first,&lt;br&gt;each with presigned download URLs valid for 4 hours. The gallery renders as a responsive tile grid&lt;br&gt;showing both the original photo and generated cartoon side by side.&lt;br&gt;Click &lt;b&gt;Download&lt;/b&gt; to save the PNG. Click &lt;b&gt;Delete&lt;/b&gt; to call &lt;b&gt;DELETE /history/{job_id}&lt;/b&gt; — which removes&lt;br&gt;the original, the cartoon, and the DynamoDB row. Items expire automatically after &lt;b&gt;7 days&lt;/b&gt;." vertex="1">
+          <mxGeometry height="105" width="657" x="158" y="1550" as="geometry" />
         </mxCell>
-
-        <!-- ================================================================ -->
-        <!-- Legend                                                            -->
-        <!-- ================================================================ -->
-        <mxCell id="leg_title" value="Legend"
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;
-                 whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;"
-          vertex="1" parent="1">
-          <mxGeometry x="75" y="1688" width="80" height="24" as="geometry" />
-        </mxCell>
-
-        <mxCell id="l1b" value="" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-          <mxGeometry x="75" y="1716" width="18" height="18" as="geometry" />
-        </mxCell>
-        <mxCell id="l1t" value="Browser / User"
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;"
-          vertex="1" parent="1">
-          <mxGeometry x="98" y="1716" width="130" height="18" as="geometry" />
-        </mxCell>
-
-        <mxCell id="l2b" value="" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
-          <mxGeometry x="240" y="1716" width="18" height="18" as="geometry" />
-        </mxCell>
-        <mxCell id="l2t" value="API Gateway / Lambda"
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;"
-          vertex="1" parent="1">
-          <mxGeometry x="263" y="1716" width="150" height="18" as="geometry" />
-        </mxCell>
-
-        <mxCell id="l3b" value="" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-          <mxGeometry x="425" y="1716" width="18" height="18" as="geometry" />
-        </mxCell>
-        <mxCell id="l3t" value="S3 / DynamoDB"
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;"
-          vertex="1" parent="1">
-          <mxGeometry x="448" y="1716" width="120" height="18" as="geometry" />
-        </mxCell>
-
-        <mxCell id="l4b" value="" style="rounded=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
-          <mxGeometry x="75" y="1742" width="18" height="18" as="geometry" />
-        </mxCell>
-        <mxCell id="l4t" value="SQS / Worker Lambda"
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;"
-          vertex="1" parent="1">
-          <mxGeometry x="98" y="1742" width="150" height="18" as="geometry" />
-        </mxCell>
-
-        <mxCell id="l5b" value="" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
-          <mxGeometry x="240" y="1742" width="18" height="18" as="geometry" />
-        </mxCell>
-        <mxCell id="l5t" value="Bedrock AI (Stability)"
-          style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;"
-          vertex="1" parent="1">
-          <mxGeometry x="263" y="1742" width="150" height="18" as="geometry" />
-        </mxCell>
-
       </root>
     </mxGraphModel>
   </diagram>

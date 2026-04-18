@@ -70,27 +70,130 @@ learning, prototyping, or extending into more advanced AI-integrated pipelines.
 
 ## Architecture
 
-![diagram](aws-cartoonify.png)
+```mermaid
+flowchart TD
+    Browser([Browser])
 
+    subgraph auth["Auth"]
+        SPA["S3 · SPA (public)"]
+        CognitoUI["Cognito Hosted UI"]
+        CB["callback.html (PKCE)"]
+    end
+
+    subgraph apigw["API Gateway — JWT Authorized"]
+        UL["upload_url λ"]
+        SL["submit λ"]
+        RL["result λ"]
+        HL["history λ"]
+        DL["delete λ"]
+    end
+
+    subgraph storage["Storage"]
+        S3M[("S3 media (private)")]
+        DDB[("DynamoDB")]
+        SQS[/"SQS Queue"/]
+    end
+
+    subgraph worker_layer["Worker"]
+        WL["Worker Lambda (ECR container)"]
+        Bedrock["Bedrock · Stability AI"]
+    end
+
+    Browser -- "visit / sign in" --> SPA
+    SPA --> CognitoUI
+    CognitoUI -- "auth code" --> CB
+    CB -- "JWT → sessionStorage" --> Browser
+
+    Browser -- "POST /upload-url" --> UL
+    UL -- "presigned S3 POST" --> Browser
+    Browser -- "PUT direct" --> S3M
+
+    Browser -- "POST /generate" --> SL
+    SL -- "status=submitted" --> DDB
+    SL --> SQS
+    SQS -- "trigger batch=1" --> WL
+    WL -- "download original" --> S3M
+    WL --> Bedrock
+    Bedrock -- "cartoon PNG" --> WL
+    WL -- "upload cartoon" --> S3M
+    WL -- "status=complete" --> DDB
+
+    Browser -- "GET /result/{id}" --> RL
+    RL -- "status + presigned URLs" --> Browser
+
+    Browser -- "GET /history" --> HL
+    HL -- "last 50 jobs" --> Browser
+
+    Browser -- "DELETE /history/{id}" --> DL
+    DL --> S3M & DDB
 ```
-Browser → S3 (SPA, public) → Cognito Hosted UI → callback.html (PKCE) → sessionStorage (JWT)
 
-Browser ──POST /upload-url──→ API Gateway (JWT) → upload_url Lambda → presigned S3 POST
-Browser ──PUT (direct)─────→ S3 media bucket (private, originals/<owner>/<job_id>.<ext>)
+## Workflow
 
-Browser ──POST /generate───→ API Gateway (JWT) → submit Lambda → DynamoDB (status=submitted)
-                                                                └→ SQS cartoonify-jobs
-                                                                        ↓
-                                                     Worker Lambda (container image, ECR)
-                                                     • Pillow: EXIF strip, 1024×1024 crop/resize
-                                                     • Bedrock invoke_model (control-structure)
-                                                     • S3 put cartoons/<owner>/<job_id>.png
-                                                     • DynamoDB (status=complete)
+![diagram](cartoonify-flow.png)
 
-Browser ──GET /result/{job_id}─→ result Lambda  → status + presigned GET URLs
-Browser ──GET /history────────→ history Lambda → newest 50 for owner
-Browser ──DELETE /history/{id}→ delete Lambda  → S3 objects + DynamoDB row
+
+## Prerequisites
+
+* [An AWS Account](https://aws.amazon.com/console/) with Bedrock enabled
+* [Install AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+* [Install Terraform](https://developer.hashicorp.com/terraform/install)
+* [Install Docker](https://docs.docker.com/engine/install/) (with `buildx` support)
+* `jq` and `envsubst` available in your PATH
+* **Bedrock model access enabled** for Stability
+  `stable-image-control-structure-v1:0` in the Bedrock console:
+  https://console.aws.amazon.com/bedrock/home?region=us-east-1#/modelaccess
+
+Region is hardcoded to `us-east-1` — the `us.*` cross-region inference profile
+routes Bedrock calls from there across `us-east-1`, `us-east-2`, and
+`us-west-2`.
+
+If this is your first time using AWS with Terraform, we recommend starting with
+this video:  
+**[AWS + Terraform: Easy Setup](https://www.youtube.com/watch?v=9clW3VQLyxA)**
+– it walks through configuring your AWS credentials, Terraform backend, and
+CLI environment.
+
+## Download this Repository
+
+```bash
+git clone https://github.com/mamonaco1973/aws-cartoonify.git
+cd aws-cartoonify
 ```
+
+## Build the Code
+
+Run [check_env](check_env.sh) to validate your environment, then run
+[apply](apply.sh) to provision all four stages.
+
+```bash
+~/aws-cartoonify$ ./apply.sh
+NOTE: Running environment validation...
+NOTE: Validating that required commands are found in your PATH.
+NOTE: aws is found in the current PATH.
+NOTE: terraform is found in the current PATH.
+NOTE: docker is found in the current PATH.
+NOTE: jq is found in the current PATH.
+NOTE: envsubst is found in the current PATH.
+NOTE: All required commands are available.
+NOTE: Checking AWS CLI connection.
+NOTE: Successfully logged into AWS.
+NOTE: Checking Bedrock inference profile access...
+NOTE: Inference profile found: us.stability.stable-image-control-structure-v1:0
+NOTE: Running Bedrock dry-run invocation to confirm model access...
+NOTE: Bedrock model access confirmed.
+...
+================================================================================
+  Cartoonify - Deployment validated!
+================================================================================
+  API : https://<api-id>.execute-api.us-east-1.amazonaws.com
+  Web : https://cartoonify-web-<hex>.s3.us-east-1.amazonaws.com/index.html
+================================================================================
+```
+
+Open the web URL, sign up, sign in, upload a photo, pick a style, and click
+**Cartoonify**. The generated cartoon appears in the gallery in roughly 15–30
+seconds.
 
 ## Deployment Stages
 
@@ -101,26 +204,64 @@ Browser ──DELETE /history/{id}→ delete Lambda  → S3 objects + DynamoDB r
 | **03-api**     | API Gateway HTTP API v2 + JWT authorizer + 5 API Lambdas + worker Lambda + SQS trigger |
 | **04-webapp**  | Generate `index.html` / `config.json` via `envsubst`, upload SPA assets to web bucket |
 
-## Job Lifecycle
+### Build Results
 
-Every job moves through the following states. The DynamoDB `status` field is
-the single source of truth — the SPA gallery and `/result/{job_id}` both read
-it directly.
+When the deployment completes, the following resources are created:
 
-```
-[start] ──POST /generate──→ submitted  (submit Lambda writes row + enqueues SQS)
-                                ↓
-                            processing  (worker pulls SQS message, marks status)
-                                ↓
-                    complete ─────── error  (exception → first 500 chars in error_message)
-                        ↓               ↓
-                  7-day TTL auto-deletes row; S3 lifecycle deletes objects
-```
+- **Core Infrastructure (Stage 01):**
+  - Fully serverless architecture — no EC2 instances, VPCs, or load balancers
+  - **Amazon SQS queue** (`cartoonify-jobs`) decoupling uploads from Bedrock
+    inference; visibility timeout set to 180 s (exceeding the 120 s worker
+    timeout) to prevent duplicate processing
+  - **Amazon DynamoDB table** (`cartoonify-jobs`) storing job state with
+    time-sortable sort keys and a 7-day TTL
+  - **Amazon ECR repository** (`cartoonify`) for the container-image worker
+  - **S3 web bucket** (`cartoonify-web-<hex>`) — public, for SPA hosting
+  - **S3 media bucket** (`cartoonify-media-<hex>`) — private, with CORS and
+    7-day lifecycle rules on `originals/` and `cartoons/`
+  - **Cognito User Pool** (`cartoonify-user-pool`) with email-based sign-in,
+    self-service signup, and a Hosted UI domain for PKCE auth
 
-The worker **swallows exceptions** so SQS does not redrive — `status=error` on
-the job row is the canonical failure signal for the SPA. The SPA gallery
-auto-refreshes every 10 s while any tile is `submitted` or `processing`, then
-stops automatically once all jobs reach a terminal state.
+- **Worker Image (Stage 02):**
+  - Docker image built for `linux/amd64` from the official AWS Lambda Python
+    3.11 base image, with Pillow installed for image normalization
+  - Pushed to ECR under a configurable tag (`worker-rc3` by default); the
+    build is skipped automatically if the tag already exists in ECR
+
+- **API and Lambdas (Stage 03):**
+  - **API Gateway HTTP API v2** with a Cognito JWT authorizer, CORS configured
+    for browser clients, and five routes mapped to dedicated Lambda functions
+  - **Five zip-packaged API Lambdas** (Python 3.11) sharing a single deployment
+    artifact and IAM role, with least-privilege access to DynamoDB, S3, and SQS
+  - **Worker Lambda** (container image from ECR) with 2048 MB memory and a
+    120 s timeout, triggered by an SQS event source mapping (`batch_size=1`)
+  - **IAM policies** scoped per role: API Lambdas can send to SQS but not
+    invoke Bedrock; the worker can invoke Bedrock but cannot delete from S3 or
+    DynamoDB
+
+- **Web Application (Stage 04):**
+  - Vanilla JS SPA (no build step, no npm) uploaded to the S3 web bucket
+  - `index.html` generated from `index.html.tmpl` via `envsubst` — API base
+    URL is injected at deploy time
+  - `config.json` generated at deploy time with Cognito domain, client ID, and
+    redirect URI — never committed to source control
+  - `callback.html` handles the Cognito PKCE redirect, exchanges the
+    authorization code for tokens, and stores them in `sessionStorage`
+
+- **Security and Authorization:**
+  - API Gateway validates JWT signatures against Cognito JWKS before any Lambda
+    is invoked — no authentication logic in application code
+  - DynamoDB partition key (`owner`) is always set to the Cognito `sub` claim —
+    users can only read or delete their own jobs
+  - S3 media objects are never publicly accessible — all access is through
+    short-lived presigned URLs generated by the API
+  - Bedrock IAM is scoped to the configured inference profile plus the
+    underlying foundation model ARNs across the three routing regions only
+
+Together, these resources form a **secure, AI-integrated, event-driven
+serverless application** that demonstrates modern AWS design principles —
+**asynchronous by default, identity-aware at every layer, and fully managed**,
+with no servers to provision or maintain.
 
 ## API Gateway Endpoints
 
@@ -326,146 +467,6 @@ curl -s -X DELETE https://<api-id>.execute-api.us-east-1.amazonaws.com/history/0
 ```
 
 ---
-
-## Prerequisites
-
-* [An AWS Account](https://aws.amazon.com/console/) with Bedrock enabled
-* [Install AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-* [Install Terraform](https://developer.hashicorp.com/terraform/install)
-* [Install Docker](https://docs.docker.com/engine/install/) (with `buildx` support)
-* `jq` and `envsubst` available in your PATH
-* **Bedrock model access enabled** for Stability
-  `stable-image-control-structure-v1:0` in the Bedrock console:
-  https://console.aws.amazon.com/bedrock/home?region=us-east-1#/modelaccess
-
-Region is hardcoded to `us-east-1` — the `us.*` cross-region inference profile
-routes Bedrock calls from there across `us-east-1`, `us-east-2`, and
-`us-west-2`.
-
-If this is your first time using AWS with Terraform, we recommend starting with
-this video:  
-**[AWS + Terraform: Easy Setup](https://www.youtube.com/watch?v=9clW3VQLyxA)**
-– it walks through configuring your AWS credentials, Terraform backend, and
-CLI environment.
-
-## Download this Repository
-
-```bash
-git clone https://github.com/mamonaco1973/aws-cartoonify.git
-cd aws-cartoonify
-```
-
-## Build the Code
-
-Run [check_env](check_env.sh) to validate your environment, then run
-[apply](apply.sh) to provision all four stages.
-
-```bash
-~/aws-cartoonify$ ./apply.sh
-NOTE: Running environment validation...
-NOTE: Validating that required commands are found in your PATH.
-NOTE: aws is found in the current PATH.
-NOTE: terraform is found in the current PATH.
-NOTE: docker is found in the current PATH.
-NOTE: jq is found in the current PATH.
-NOTE: envsubst is found in the current PATH.
-NOTE: All required commands are available.
-NOTE: Checking AWS CLI connection.
-NOTE: Successfully logged into AWS.
-NOTE: Checking Bedrock inference profile access...
-NOTE: Inference profile found: us.stability.stable-image-control-structure-v1:0
-NOTE: Running Bedrock dry-run invocation to confirm model access...
-NOTE: Bedrock model access confirmed.
-
-NOTE: Phase 1 - Building core infrastructure.
-Initializing the backend...
-
-...
-
-NOTE: Phase 2 - Building and pushing the worker image.
-NOTE: Image worker-rc3 not found in ECR. Building and pushing...
-[+] Building 42.3s (9/9) FINISHED
-
-NOTE: Phase 3 - Deploying API Gateway and Lambda functions.
-Initializing the backend...
-
-...
-
-NOTE: Phase 4 - Deploying the web application.
-Initializing the backend...
-
-...
-
-================================================================================
-  Cartoonify - Deployment validated!
-================================================================================
-  API : https://<api-id>.execute-api.us-east-1.amazonaws.com
-  Web : https://cartoonify-web-<hex>.s3.us-east-1.amazonaws.com/index.html
-================================================================================
-```
-
-Open the web URL, sign up, sign in, upload a photo, pick a style, and click
-**Cartoonify**. The generated cartoon appears in the gallery in roughly 15–30
-seconds.
-
-### Build Results
-
-When the deployment completes, the following resources are created:
-
-- **Core Infrastructure (Stage 01):**
-  - Fully serverless architecture — no EC2 instances, VPCs, or load balancers
-  - **Amazon SQS queue** (`cartoonify-jobs`) decoupling uploads from Bedrock
-    inference; visibility timeout set to 180 s (exceeding the 120 s worker
-    timeout) to prevent duplicate processing
-  - **Amazon DynamoDB table** (`cartoonify-jobs`) storing job state with
-    time-sortable sort keys and a 7-day TTL
-  - **Amazon ECR repository** (`cartoonify`) for the container-image worker
-  - **S3 web bucket** (`cartoonify-web-<hex>`) — public, for SPA hosting
-  - **S3 media bucket** (`cartoonify-media-<hex>`) — private, with CORS and
-    7-day lifecycle rules on `originals/` and `cartoons/`
-  - **Cognito User Pool** (`cartoonify-user-pool`) with email-based sign-in,
-    self-service signup, and a Hosted UI domain for PKCE auth
-
-- **Worker Image (Stage 02):**
-  - Docker image built for `linux/amd64` from the official AWS Lambda Python
-    3.11 base image, with Pillow installed for image normalization
-  - Pushed to ECR under a configurable tag (`worker-rc3` by default); the
-    build is skipped automatically if the tag already exists in ECR
-
-- **API and Lambdas (Stage 03):**
-  - **API Gateway HTTP API v2** with a Cognito JWT authorizer, CORS configured
-    for browser clients, and five routes mapped to dedicated Lambda functions
-  - **Five zip-packaged API Lambdas** (Python 3.11) sharing a single deployment
-    artifact and IAM role, with least-privilege access to DynamoDB, S3, and SQS
-  - **Worker Lambda** (container image from ECR) with 2048 MB memory and a
-    120 s timeout, triggered by an SQS event source mapping (`batch_size=1`)
-  - **IAM policies** scoped per role: API Lambdas can send to SQS but not
-    invoke Bedrock; the worker can invoke Bedrock but cannot delete from S3 or
-    DynamoDB
-
-- **Web Application (Stage 04):**
-  - Vanilla JS SPA (no build step, no npm) uploaded to the S3 web bucket
-  - `index.html` generated from `index.html.tmpl` via `envsubst` — API base
-    URL is injected at deploy time
-  - `config.json` generated at deploy time with Cognito domain, client ID, and
-    redirect URI — never committed to source control
-  - `callback.html` handles the Cognito PKCE redirect, exchanges the
-    authorization code for tokens, and stores them in `sessionStorage`
-
-- **Security and Authorization:**
-  - API Gateway validates JWT signatures against Cognito JWKS before any Lambda
-    is invoked — no authentication logic in application code
-  - DynamoDB partition key (`owner`) is always set to the Cognito `sub` claim —
-    users can only read or delete their own jobs
-  - S3 media objects are never publicly accessible — all access is through
-    short-lived presigned URLs generated by the API
-  - Bedrock IAM is scoped to the configured inference profile plus the
-    underlying foundation model ARNs across the three routing regions only
-
-Together, these resources form a **secure, AI-integrated, event-driven
-serverless application** that demonstrates modern AWS design principles —
-**asynchronous by default, identity-aware at every layer, and fully managed**,
-with no servers to provision or maintain.
 
 ## Changing the Bedrock Model
 
