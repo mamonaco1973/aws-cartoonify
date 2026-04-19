@@ -4,17 +4,17 @@
 
 ## Introduction
 
-[ Screen recording of the Notes Demo web app — logging in via Cognito Hosted UI, then creating and deleting notes ]
+[ Opening Sequence ]
 
-"In the last video we built a serverless CRUD API on AWS using Lambda, DynamoDB, and API Gateway. In this video we secure it with real user authentication using Amazon Cognito."
+“Do you want to build an AI-powered image pipeline on AWS?”
 
-[ Architecture diagram — walk through it: browser, S3, Cognito, API Gateway, Lambda, DynamoDB ]
+[ Show Diagram ]
 
-"We'll add a Cognito User Pool with a Hosted UI, a PKCE OAuth2 login flow, and a JWT authorizer on API Gateway — so every API call is verified before Lambda ever runs."
+"In this project, we build a fully serverless pipeline that turns photos into cartoons using AWS and Bedrock."
 
-[ Terminal running apply.sh — Terraform output, ending with the website URL ]
+[ Build B Roll ]
 
-"Follow along and in minutes you'll have a working authenticated API running in AWS."
+Follow along and in minutes you’ll have a fully working AI pipeline running on AWS.
 
 ---
 
@@ -24,25 +24,45 @@
 
 "Let's walk through the architecture before we build."
 
-[ Highlight left block: Browser + S3 + Cognito ]
+[ Diagram then Congito ]
 
-"The user opens a static web app from S3 and signs in with Cognito."
+"First, the user signs into the web application using Cognito."
 
-[ Highlight JWT arrow ]
+[ Choose File then Diagam ]
 
-"Cognito returns a JWT — and that token is sent with every API request."
+"When the user selects “Choose File”, the image is uploaded to an S3 bucket."
 
-[ Highlight API Gateway ]
+[  Cartoonify ]
 
-"API Gateway validates the token before the request is allowed through."
+When the user selects “Cartoonify”, the API does two things:
+
+[ Highlight Dynamo DB]
+
+It creates a job record in DynamoDB
+
+[ Highlight SQS queue ]
+
+Then it sends a message to the image processing SQS queue.
 
 [ Highlight Lambda ]
 
-"Lambda handles the request and runs the application logic."
+"SQS triggers the worker Lambda."
 
-[ Highlight DynamoDB ]
+[ Show bedrock ]
 
-"DynamoDB stores the data — the owner field is scoped to the authenticated user."
+"The worker Lambda calls Bedrock to generate the cartoon."
+
+[ Show S3 Media Bucket]
+
+"The generated image is written back to S3".
+
+[ Final Dynamo DB State]
+
+When processing completes, the job status is updated in DynamoDB.
+
+[ Show final result ]
+
+The web application refreshes and displays the generated image.
 
 ---
 

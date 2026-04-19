@@ -10,7 +10,7 @@
         <mxCell id="aws-label" parent="1" style="shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=none;fillColor=none;fontColor=#232F3E;fontSize=14;align=left;labelPosition=right;verticalLabelPosition=middle;verticalAlign=middle;spacing=8;html=1;points=[];" value="AWS Cloud — us-east-1" vertex="1">
           <mxGeometry height="26.25" width="32" x="170" y="10" as="geometry" />
         </mxCell>
-        <mxCell id="browser" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Browser.svg;labelBackgroundColor=none;verticalLabelPosition=bottom;verticalAlign=top;textShadow=1;labelBorderColor=default;" value="Browser (SPA)" vertex="1">
+        <mxCell id="browser" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Browser.svg;labelBackgroundColor=none;verticalLabelPosition=bottom;verticalAlign=top;textShadow=1;labelBorderColor=none;" value="Browser (SPA)" vertex="1">
           <mxGeometry height="50" width="57" x="60" y="220" as="geometry" />
         </mxCell>
         <mxCell id="cognito" parent="1" style="sketch=0;outlineConnect=0;fontColor=#000000;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cognito;textShadow=0;" value="Cognito&lt;div&gt;Hosted UI&lt;/div&gt;" vertex="1">
