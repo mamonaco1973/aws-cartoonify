@@ -112,52 +112,35 @@ API Gateway validates the caller's Bearer token before calling the lambda.
 
 ## Demo
 
-[ Browser — Notes Demo, Login button visible ]
+[ Time 0 ]
 
-"When the app loads initially we are not logged in yet — the note list is empty and the controls are disabled"
+"Navigate to the web application URL"
 
 [ Clicking Login — Cognito Hosted UI opens ]
 
-"Click Login. The browser redirects to the Cognito Hosted UI."
+"Sign in using Cognito."
 
-[ Creating a new user account or signing in ]
+[ Choose File ]
 
-"Sign in with an existing account — or create one here."
+"Once signed in, select “Choose File” and upload a test image."
 
-[ Cognito redirects back to callback.html ]
+[ Pencil Sketch]
 
-"Cognito redirects back to callback.html. The page exchanges the authorization code for tokens and stores the access token in sessionStorage."
+"Select the “Pencil Sketch” style, then click “Cartoonify” to start the image generation pipeline."
 
-[ Browser — Notes Demo, now logged in, DevTools → Network tab ]
+[ Show Life Cycle ]
 
-"We're back in the app, now authenticated. Open DevTools so we can watch the API calls."
+"The application displays the image generation lifecycle."
 
-[ Refresh — GET /notes call visible with Authorization header ]
+[ Show Results ]
 
-"The app calls the list endpoint — and you can see the Bearer token in the Authorization header."
+"When processing completes, the application refreshes and shows the result."
 
-[ Clicking New — modal opens, typing a title, clicking Create ]
+[ Show Styles ]
 
-"Create a new note."
+"Now try some different styles. 
 
-[ Show network tab — POST with auth header ]
-
-"A POST is made with the JWT. API Gateway validates it, Lambda extracts the sub, and the note is stored under this user's partition key."
-
-[ Editing and clicking Save ]
-
-"Update the note."
-
-[ Show network tab ]
-
-"A PUT call — same auth flow."
-
-[ Clicking Delete ]
-
-"Delete the note."
-
-[ Browser — empty list ]
-
-"In this demo we've exercised every API endpoint — all secured with Cognito JWT authentication."
+[ Show Gallery ]
+The application displays a gallery of your previous results."
 
 ---
