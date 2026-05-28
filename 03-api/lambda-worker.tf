@@ -70,7 +70,7 @@ resource "aws_iam_role_policy" "worker_inline" {
         Resource = concat(
           # Cross-region inference profile (actual invocation target)
           [
-            "arn:aws:bedrock:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_inference_profile_id}"
+            "arn:aws:bedrock:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_inference_profile_id}"
           ],
           # Underlying foundation model in every region the profile may route to
           [
